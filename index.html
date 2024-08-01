@@ -91,6 +91,12 @@
             left: 50%;
             transform: translateX(-50%);
         }
+        #upload-input {
+            position: absolute;
+            top: 13px;
+            left: 25%;
+            transform: translateX(-50%);
+        }
         #support-me {
             bottom: 10px;
             display: block;
@@ -157,6 +163,7 @@
         <option value="https://raw.githubusercontent.com/bradinator33/bradinator33.github.io/f08e6bcb63904b977e54cde814647b4c18e751a2/maps/WisconsinMunicipalities.svg">Wisconsin Municipalities</option>
         <option value="https://raw.githubusercontent.com/bradinator33/bradinator33.github.io/f08e6bcb63904b977e54cde814647b4c18e751a2/maps/WyomingMunicipalities.svg">Wyoming Municipalities</option>
     </select>
+    <input type="file" id="upload-input" accept=".svg">
     <input type="color" id="color-input" value="#ff0000">
     <button id="download-button">Download SVG</button>
     <div id="svg-container"></div>
@@ -173,6 +180,7 @@
         document.getElementById('color-input').addEventListener('input', handleColorChange);
         document.getElementById('download-button').addEventListener('click', downloadSvg);
         document.getElementById('map-dropdown').addEventListener('change', handleMapSelect);
+        document.getElementById('upload-input').addEventListener('change', handleFileSelect);
 
         function setMode(newMode) {
             mode = newMode;
@@ -213,6 +221,19 @@
             }).catch(error => {
                 alert(error.message);
             });
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file && file.type === 'image/svg+xml') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    displaySvg(e.target.result);
+                };
+                reader.readAsText(file);
+            } else {
+                alert('Please upload a valid SVG file.');
+            }
         }
 
         function displaySvg(svgContent) {
