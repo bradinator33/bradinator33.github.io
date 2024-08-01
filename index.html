@@ -99,8 +99,8 @@
         <input type="range" id="mode-slider" class="slider" min="0" max="1" step="1" value="0">
         <span id="mode-indicator" class="mode-indicator">Color Mode</span>
     </div>
-    <select id="state-selector">
-        <option value="">Select a State</option>
+    <select id="map-dropdown">
+        <option value="" selected disabled>Select Map</option>
         <option value="https://raw.githubusercontent.com/bradinator33/bradinator33.github.io/0c8e4215b6063392297182772a2729c56c7267c5/maps/AlabamaMunicipalities.svg">Alabama Municipalities</option>
         <option value="https://raw.githubusercontent.com/bradinator33/bradinator33.github.io/0c8e4215b6063392297182772a2729c56c7267c5/maps/AlaskaMunicipalities.svg">Alaska Municipalities</option>
         <option value="https://raw.githubusercontent.com/bradinator33/bradinator33.github.io/0c8e4215b6063392297182772a2729c56c7267c5/maps/ArizonaMunicipalities.svg">Arizona Municipalities</option>
@@ -159,12 +159,12 @@
     <div id="svg-container"></div>
 
     <script>
-        let mode = 'color';
+        let mode = 'color'; // Default mode is 'color'
         let svgElement;
         let scale = 1;
         let panX = 0, panY = 0;
         let selectedColor = '#ff0000';
-        let originalColors = new Map();
+        let originalColors = new Map(); // Map to track original colors
         let isPanning = false;
         let lastX = 0, lastY = 0;
 
