@@ -101,7 +101,7 @@
     </div>
     <select id="map-dropdown">
         <option value="" selected disabled>Select Map</option>
-        <option value="https://raw.githubusercontent.com/YourUsername/YourRepoName/main/path/to/Minnesota%20Municipalities.svg">Minnesota Municipalities</option>
+        <option value="https://raw.githubusercontent.com/bradinator33/bradinator33.github.io/f08e6bcb63904b977e54cde814647b4c18e751a2/maps/AlabamaMunicipalities.svg">Alabama Municipalities</option>
     </select>
     <input type="color" id="color-input" value="#ff0000">
     <button id="download-button">Download SVG</button>
@@ -287,7 +287,7 @@
         setMode('color');
 
         // Load default map
-        const defaultMapUrl = "https://github.com/bradinator33/USA-Municipality-Editor/blob/23e05774c82c085c2e042d41670d9e6844b9690d/maps/MinnesotaMunicipalities.svg";
+        const defaultMapUrl = "https://raw.githubusercontent.com/bradinator33/bradinator33.github.io/f08e6bcb63904b977e54cde814647b4c18e751a2/maps/AlabamaMunicipalities.svg";
         fetch(defaultMapUrl).then(response => {
             if (response.ok) {
                 return response.text();
