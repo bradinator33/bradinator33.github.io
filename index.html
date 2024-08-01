@@ -8,10 +8,10 @@
         #svg-container {
             border: 1px solid black;
             margin-top: 10px;
-            height: 800px; /* Increased height */
+            height: 600px;
             overflow: hidden;
             position: relative;
-            background: #f0f0f0; /* Light background for better visibility */
+            background: #cacaca;
         }
         svg {
             position: absolute;
@@ -116,12 +116,12 @@
     <div id="svg-container"></div>
 
     <script>
-        let mode = 'color'; // Default mode is 'color'
+        let mode = 'color';
         let svgElement;
         let scale = 1;
         let panX = 0, panY = 0;
         let selectedColor = '#ff0000';
-        let originalColors = new Map(); // Map to track original colors
+        let originalColors = new Map();
 
         document.getElementById('mode-slider').addEventListener('input', handleModeChange);
         document.getElementById('color-input').addEventListener('input', handleColorChange);
@@ -300,8 +300,7 @@
                 svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
             }
         }
-
-        // Initial mode setup
+        
         setMode('color');
     </script>
 </body>
