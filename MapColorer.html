@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Editor</title>
+    <style>
+        #svg-container {
+            border: 1px solid black;
+            margin-top: 10px;
+            height: 800px; /* Increased height */
+            overflow: hidden;
+            position: relative;
+            background: #f0f0f0; /* Light background for better visibility */
+        }
+        svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: grab;
+            transition: transform 0.1s;
+        }
+        .shape {
+            cursor: pointer;
+        }
+        .zoomable {
+            cursor: grab;
+        }
+        .zoomable:active {
+            cursor: grabbing;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .slider-label {
+            margin-right: 10px;
+        }
+        .slider {
+            -webkit-appearance: none;
+            width: 150px;
+            height: 15px;
+            border-radius: 5px;
+            background: #ddd;
+            cursor: pointer;
+            outline: none;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+        }
+        .slider::-moz-range-thumb {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+        }
+        .mode-indicator {
+            margin-left: 10px;
+        }
+        .color-picker-container {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+        }
+        #color-input {
+            position: absolute;
+            top: 5px;
+            left: 320px;
+        }
+        #download-button {
+            position: absolute;
+            top: 7px;
+            right: 30px;
+            padding: 5px 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        #map-dropdown {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+<body>
+    <div class="slider-container">
+        <label for="mode-slider" class="slider-label">Mode:</label>
+        <input type="range" id="mode-slider" class="slider" min="0" max="1" step="1" value="0">
+        <span id="mode-indicator" class="mode-indicator">Color Mode</span>
+    </div>
+    <select id="map-dropdown">
+        <option value="" selected disabled>Select Map</option>
+        <option value="https://raw.githubusercontent.com/YourUsername/YourRepoName/main/path/to/Minnesota%20Municipalities.svg">Minnesota Municipalities</option>
+    </select>
+    <input type="color" id="color-input" value="#ff0000">
+    <button id="download-button">Download SVG</button>
+    <div id="svg-container"></div>
+
+    <script>
+        let mode = 'color'; // Default mode is 'color'
+        let svgElement;
+        let scale = 1;
+        let panX = 0, panY = 0;
+        let selectedColor = '#ff0000';
+        let originalColors = new Map(); // Map to track original colors
+
+        document.getElementById('mode-slider').addEventListener('input', handleModeChange);
+        document.getElementById('color-input').addEventListener('input', handleColorChange);
+        document.getElementById('download-button').addEventListener('click', downloadSvg);
+        document.getElementById('map-dropdown').addEventListener('change', handleMapSelect);
+
+        function setMode(newMode) {
+            mode = newMode;
+            updateMode();
+        }
+
+        function updateMode() {
+            if (mode === 'color') {
+                enableColorMode();
+                document.getElementById('mode-slider').value = 0;
+                document.getElementById('mode-indicator').textContent = 'Color Mode';
+            } else if (mode === 'zoom') {
+                enableZoomMode();
+                document.getElementById('mode-slider').value = 1;
+                document.getElementById('mode-indicator').textContent = 'Zoom Mode';
+            }
+        }
+
+        function handleModeChange(event) {
+            const value = event.target.value;
+            setMode(value === '0' ? 'color' : 'zoom');
+        }
+
+        function handleColorChange(event) {
+            selectedColor = event.target.value;
+        }
+
+        function handleMapSelect(event) {
+            const url = event.target.value;
+            fetch(url).then(response => {
+                if (response.ok) {
+                    return response.text();
+                } else {
+                    throw new Error('Failed to load the map file.');
+                }
+            }).then(svgContent => {
+                displaySvg(svgContent);
+            }).catch(error => {
+                alert(error.message);
+            });
+        }
+
+        function displaySvg(svgContent) {
+            const container = document.getElementById('svg-container');
+            container.innerHTML = svgContent;
+            svgElement = container.querySelector('svg');
+            if (svgElement) {
+                svgElement.classList.add('zoomable');
+                const bbox = svgElement.getBBox();
+                svgElement.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
+                svgElement.setAttribute('width', '100%');
+                svgElement.setAttribute('height', '100%');
+                svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+                updateMode();
+            }
+        }
+
+        function enableColorMode() {
+            svgElement.style.cursor = '';
+            svgElement.removeEventListener('wheel', handleZoom);
+            svgElement.removeEventListener('mousedown', startPan);
+            svgElement.removeEventListener('mousemove', doPan);
+            svgElement.removeEventListener('mouseup', endPan);
+
+            const shapes = svgElement.querySelectorAll('*');
+            shapes.forEach(shape => {
+                shape.classList.add('shape');
+                shape.addEventListener('click', colorShape);
+                shape.addEventListener('contextmenu', revertColor);
+            });
+        }
+
+        function enableZoomMode() {
+            svgElement.style.cursor = 'grab';
+            svgElement.addEventListener('wheel', handleZoom);
+            svgElement.addEventListener('mousedown', startPan);
+            svgElement.addEventListener('mousemove', doPan);
+            svgElement.addEventListener('mouseup', endPan);
+
+            const shapes = svgElement.querySelectorAll('*');
+            shapes.forEach(shape => {
+                shape.classList.remove('shape');
+                shape.removeEventListener('click', colorShape);
+                shape.removeEventListener('contextmenu', revertColor);
+            });
+        }
+
+        function colorShape(event) {
+            if (mode === 'color') {
+                const shape = event.target;
+                if (!originalColors.has(shape)) {
+                    originalColors.set(shape, shape.style.fill || 'none');
+                }
+                shape.style.fill = selectedColor;
+            }
+        }
+
+        function revertColor(event) {
+            event.preventDefault();
+            if (mode === 'color') {
+                const shape = event.target;
+                if (originalColors.has(shape)) {
+                    shape.style.fill = originalColors.get(shape);
+                }
+            }
+        }
+
+        function downloadSvg() {
+            if (!svgElement) return;
+
+            const serializer = new XMLSerializer();
+            const svgData = serializer.serializeToString(svgElement);
+            const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'recolored.svg';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        let isPanning = false;
+        let startX, startY;
+
+        function startPan(event) {
+            if (mode === 'zoom') {
+                isPanning = true;
+                startX = event.pageX;
+                startY = event.pageY;
+                event.preventDefault();
+            }
+        }
+
+        function doPan(event) {
+            if (isPanning && mode === 'zoom') {
+                const dx = event.pageX - startX;
+                const dy = event.pageY - startY;
+                panX += dx;
+                panY += dy;
+                svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+                startX = event.pageX;
+                startY = event.pageY;
+                event.preventDefault();
+            }
+        }
+
+        function endPan() {
+            if (mode === 'zoom') {
+                isPanning = false;
+            }
+        }
+
+        function handleZoom(event) {
+            if (mode === 'zoom') {
+                event.preventDefault();
+                const delta = event.deltaY > 0 ? -0.1 : 0.1;
+                scale += delta;
+                scale = Math.min(Math.max(0.1, scale), 10);
+                svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+            }
+        }
+
+        // Initial mode setup
+        setMode('color');
+
+        // Load default map
+        const defaultMapUrl = "https://github.com/bradinator33/USA-Municipality-Editor/blob/23e05774c82c085c2e042d41670d9e6844b9690d/maps/MinnesotaMunicipalities.svg";
+        fetch(defaultMapUrl).then(response => {
+            if (response.ok) {
+                return response.text();
+            } else {
+                throw new Error('Failed to load the default map file.');
+            }
+        }).then(svgContent => {
+            displaySvg(svgContent);
+        }).catch(error => {
+            alert(error.message);
+        });
+    </script>
+</body>
+</html>
