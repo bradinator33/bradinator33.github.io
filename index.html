@@ -152,202 +152,119 @@
         <option value="https://raw.githubusercontent.com/bradinator33/bradinator33.github.io/d96f1698c739ae863fb801b41438b5c0b91814c5/maps/WisconsinMunicipalities.svg">Wisconsin Municipalities</option>
         <option value="https://raw.githubusercontent.com/bradinator33/bradinator33.github.io/d96f1698c739ae863fb801b41438b5c0b91814c5/maps/WyomingMunicipalities.svg">Wyoming Municipalities</option>
     </select>
-    <input type="color" id="color-input" value="#ff0000">
-    <input type="file" id="upload-input" accept=".svg" style="display:none;">
-    <button id="upload-button">Upload SVG</button>
     <button id="download-button">Download SVG</button>
     <div id="svg-container"></div>
-
+    <input type="color" id="color-input" value="#ff0000">
     <script>
-        let mode = 'color'; // Default mode is 'color'
+        const svgContainer = document.getElementById('svg-container');
+        const colorInput = document.getElementById('color-input');
+        const downloadButton = document.getElementById('download-button');
+        const modeSlider = document.getElementById('mode-slider');
+        const modeIndicator = document.getElementById('mode-indicator');
+        const mapDropdown = document.getElementById('map-dropdown');
+        let currentMode = 'Color';
+        let currentColor = colorInput.value;
+        let originalColors = new Map();
         let svgElement;
-        let scale = 1;
-        let panX = 0, panY = 0;
-        let selectedColor = '#ff0000';
-        let originalColors = new Map(); // Map to track original colors
-        let isPanning = false;
-        let lastX = 0, lastY = 0;
 
-        document.getElementById('mode-slider').addEventListener('input', handleModeChange);
-        document.getElementById('color-input').addEventListener('input', handleColorChange);
-        document.getElementById('upload-button').addEventListener('click', () => document.getElementById('upload-input').click());
-        document.getElementById('upload-input').addEventListener('change', handleFileUpload);
-        document.getElementById('download-button').addEventListener('click', downloadSvg);
-        document.getElementById('map-dropdown').addEventListener('change', handleMapSelect);
+        modeSlider.addEventListener('input', () => {
+            currentMode = modeSlider.value == 0 ? 'Color' : 'Zoom';
+            modeIndicator.textContent = currentMode + ' Mode';
+        });
 
-        function setMode(newMode) {
-            mode = newMode;
-            updateMode();
-        }
+        colorInput.addEventListener('input', (event) => {
+            currentColor = event.target.value;
+        });
 
-        function updateMode() {
-            if (mode === 'color') {
-                enableColorMode();
-                document.getElementById('mode-slider').value = 0;
-                document.getElementById('mode-indicator').textContent = 'Color Mode';
-            } else if (mode === 'zoom') {
-                enableZoomMode();
-                document.getElementById('mode-slider').value = 1;
-                document.getElementById('mode-indicator').textContent = 'Zoom Mode';
+        mapDropdown.addEventListener('change', (event) => {
+            const url = event.target.value;
+            if (url) {
+                fetch(url)
+                    .then(response => response.text())
+                    .then(data => {
+                        svgContainer.innerHTML = data;
+                        svgElement = svgContainer.querySelector('svg');
+                        if (svgElement) {
+                            svgElement.classList.add('zoomable');
+                            addSvgEventListeners();
+                        }
+                    });
             }
-        }
+        });
 
-        function handleModeChange(event) {
-            const value = event.target.value;
-            setMode(value === '0' ? 'color' : 'zoom');
-        }
-
-        function handleColorChange(event) {
-            selectedColor = event.target.value;
-        }
-
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (file && file.type === 'image/svg+xml') {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    displaySvg(e.target.result);
-                };
-                reader.readAsText(file);
-            } else {
-                alert('Please upload a valid SVG file.');
-            }
-        }
-
-        function handleMapSelect(event) {
-            const url = event.target.value.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
-            fetch(url).then(response => {
-                if (response.ok) {
-                    return response.text();
-                } else {
-                    throw new Error('Failed to load the map file.');
-                }
-            }).then(svgContent => {
-                displaySvg(svgContent);
-            }).catch(error => {
-                alert(error.message);
-            });
-        }
-
-        function displaySvg(svgContent) {
-            const container = document.getElementById('svg-container');
-            container.innerHTML = svgContent;
-            svgElement = container.querySelector('svg');
+        downloadButton.addEventListener('click', () => {
             if (svgElement) {
-                svgElement.classList.add('zoomable');
-                const bbox = svgElement.getBBox();
-                svgElement.setAttribute('viewBox', ${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height});
-                svgElement.setAttribute('width', '100%');
-                svgElement.setAttribute('height', '100%');
-                svgElement.style.transform = translate(${panX}px, ${panY}px) scale(${scale});
-                updateMode();
+                const serializer = new XMLSerializer();
+                const svgData = serializer.serializeToString(svgElement);
+                const blob = new Blob([svgData], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'map.svg';
+                a.click();
+                URL.revokeObjectURL(url);
             }
-        }
+        });
 
-        function enableColorMode() {
-            svgElement.style.cursor = '';
-            svgElement.removeEventListener('wheel', handleZoom);
-            svgElement.removeEventListener('mousedown', startPan);
-            svgElement.removeEventListener('mousemove', doPan);
-            svgElement.removeEventListener('mouseup', endPan);
-
-            const shapes = svgElement.querySelectorAll('*');
-            shapes.forEach(shape => {
-                shape.classList.add('shape');
-                shape.addEventListener('click', colorShape);
-                shape.addEventListener('contextmenu', revertColor);
+        function addSvgEventListeners() {
+            svgElement.querySelectorAll('.shape').forEach(shape => {
+                shape.addEventListener('click', handleShapeClick);
+                shape.addEventListener('contextmenu', handleShapeRightClick);
             });
+
+            svgElement.addEventListener('mousedown', handleMouseDown);
+            svgElement.addEventListener('mouseup', handleMouseUp);
+            svgElement.addEventListener('mousemove', handleMouseMove);
         }
 
-        function enableZoomMode() {
-            svgElement.style.cursor = 'grab';
-            svgElement.addEventListener('wheel', handleZoom);
-            svgElement.addEventListener('mousedown', startPan);
-            svgElement.addEventListener('mousemove', doPan);
-            svgElement.addEventListener('mouseup', endPan);
-
-            const shapes = svgElement.querySelectorAll('*');
-            shapes.forEach(shape => {
-                shape.classList.remove('shape');
-                shape.removeEventListener('click', colorShape);
-                shape.removeEventListener('contextmenu', revertColor);
-            });
-        }
-
-        function colorShape(event) {
-            if (mode === 'color') {
+        function handleShapeClick(event) {
+            if (currentMode === 'Color') {
                 const shape = event.target;
+                const originalColor = shape.getAttribute('fill');
                 if (!originalColors.has(shape)) {
-                    originalColors.set(shape, shape.style.fill || 'none');
+                    originalColors.set(shape, originalColor);
                 }
-                shape.style.fill = selectedColor;
+                shape.setAttribute('fill', currentColor);
             }
         }
 
-        function revertColor(event) {
+        function handleShapeRightClick(event) {
             event.preventDefault();
-            if (mode === 'color') {
+            if (currentMode === 'Color') {
                 const shape = event.target;
                 if (originalColors.has(shape)) {
-                    shape.style.fill = originalColors.get(shape);
+                    shape.setAttribute('fill', originalColors.get(shape));
+                    originalColors.delete(shape);
                 }
             }
         }
 
-        function downloadSvg() {
-            if (!svgElement) return;
+        let isDragging = false;
+        let startX, startY;
 
-            const serializer = new XMLSerializer();
-            const svgData = serializer.serializeToString(svgElement);
-            const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'colored_map.svg';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        function startPan(event) {
-            if (mode === 'zoom') {
-                isPanning = true;
-                svgElement.style.cursor = 'grabbing';
-                lastX = event.clientX;
-                lastY = event.clientY;
+        function handleMouseDown(event) {
+            if (currentMode === 'Zoom' && event.which === 1) {
+                isDragging = true;
+                startX = event.clientX;
+                startY = event.clientY;
             }
         }
 
-        function doPan(event) {
-            if (mode === 'zoom' && isPanning) {
-                const dx = event.clientX - lastX;
-                const dy = event.clientY - lastY;
-                lastX = event.clientX;
-                lastY = event.clientY;
-                panX += dx;
-                panY += dy;
-                svgElement.style.transform = translate(${panX}px, ${panY}px) scale(${scale});
+        function handleMouseUp(event) {
+            if (currentMode === 'Zoom') {
+                isDragging = false;
             }
         }
 
-        function endPan() {
-            if (mode === 'zoom') {
-                isPanning = false;
-                svgElement.style.cursor = 'grab';
+        function handleMouseMove(event) {
+            if (currentMode === 'Zoom' && isDragging) {
+                const dx = event.clientX - startX;
+                const dy = event.clientY - startY;
+                svgElement.style.transform = `translate(${dx}px, ${dy}px)`;
+                startX = event.clientX;
+                startY = event.clientY;
             }
         }
-
-        function handleZoom(event) {
-            if (mode === 'zoom') {
-                event.preventDefault();
-                const scaleAmount = event.deltaY * -0.01;
-                scale = Math.min(Math.max(.125, scale + scaleAmount), 10);
-                svgElement.style.transform = translate(${panX}px, ${panY}px) scale(${scale});
-            }
-        }
-
-        setMode('color');
     </script>
 </body>
 </html>
