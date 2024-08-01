@@ -91,26 +91,6 @@
             left: 50%;
             transform: translateX(-50%);
         }
-        #reset-zoom-button {
-            position: absolute;
-            top: 13px;
-            right: 25%;
-            padding: 5px 10px;
-            background-color: #f44336;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-        #support-me {
-            display: block;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        #support-me a {
-            color: #757575;
-            text-decoration: none;
-        }
     </style>
 </head>
 <body>
@@ -176,9 +156,7 @@
     <input type="file" id="upload-input" accept=".svg" style="display:none;">
     <button id="upload-button">Upload SVG</button>
     <button id="download-button">Download SVG</button>
-    <button id="reset-zoom-button">Reset Zoom</button>
     <div id="svg-container"></div>
-    <p id="support-me"><a href="https://www.patreon.com/bradinator33" target="_blank">Support me</a></p>
 
     <script>
         let mode = 'color'; // Default mode is 'color'
@@ -258,10 +236,10 @@
             if (svgElement) {
                 svgElement.classList.add('zoomable');
                 const bbox = svgElement.getBBox();
-                svgElement.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
+                svgElement.setAttribute('viewBox', ${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height});
                 svgElement.setAttribute('width', '100%');
                 svgElement.setAttribute('height', '100%');
-                svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+                svgElement.style.transform = translate(${panX}px, ${panY}px) scale(${scale});
                 updateMode();
             }
         }
@@ -287,9 +265,6 @@
             svgElement.addEventListener('mousedown', startPan);
             svgElement.addEventListener('mousemove', doPan);
             svgElement.addEventListener('mouseup', endPan);
-            resetZoomButton.addEventListener('click', () => {
-                svgContent.setAttribute('transform', 'translate(0, 0) scale(1)');
-            });
 
             const shapes = svgElement.querySelectorAll('*');
             shapes.forEach(shape => {
@@ -352,7 +327,7 @@
                 lastY = event.clientY;
                 panX += dx;
                 panY += dy;
-                svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+                svgElement.style.transform = translate(${panX}px, ${panY}px) scale(${scale});
             }
         }
 
@@ -368,7 +343,7 @@
                 event.preventDefault();
                 const scaleAmount = event.deltaY * -0.01;
                 scale = Math.min(Math.max(.125, scale + scaleAmount), 10);
-                svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+                svgElement.style.transform = translate(${panX}px, ${panY}px) scale(${scale});
             }
         }
 
