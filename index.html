@@ -110,12 +110,14 @@
     <div id="svg-container"></div>
 
     <script>
-        let mode = 'color';
+        let mode = 'color'; // Default mode is 'color'
         let svgElement;
         let scale = 1;
         let panX = 0, panY = 0;
         let selectedColor = '#ff0000';
-        let originalColors = new Map();
+        let originalColors = new Map(); // Map to track original colors
+        let isPanning = false;
+        let lastX = 0, lastY = 0;
 
         document.getElementById('mode-slider').addEventListener('input', handleModeChange);
         document.getElementById('color-input').addEventListener('input', handleColorChange);
@@ -252,30 +254,31 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'recolored.svg';
+            a.download = 'colored_map.svg';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
-
-        let isPanning = false;
 
         function startPan(event) {
             if (mode === 'zoom') {
                 isPanning = true;
                 svgElement.style.cursor = 'grabbing';
-                panX = event.clientX;
-                panY = event.clientY;
+                lastX = event.clientX;
+                lastY = event.clientY;
             }
         }
 
         function doPan(event) {
             if (mode === 'zoom' && isPanning) {
-                const dx = event.clientX - panX;
-                const dy = event.clientY - panY;
-                panX = event.clientX;
-                panY = event.clientY;
-                svgElement.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
+                const dx = event.clientX - lastX;
+                const dy = event.clientY - lastY;
+                lastX = event.clientX;
+                lastY = event.clientY;
+                panX += dx;
+                panY += dy;
+                svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
             }
         }
 
@@ -289,12 +292,12 @@
         function handleZoom(event) {
             if (mode === 'zoom') {
                 event.preventDefault();
-                scale += event.deltaY * -0.01;
-                scale = Math.min(Math.max(.125, scale), 10);
+                const scaleAmount = event.deltaY * -0.01;
+                scale = Math.min(Math.max(.125, scale + scaleAmount), 10);
                 svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
             }
         }
-        
+
         setMode('color');
     </script>
 </body>
