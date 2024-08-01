@@ -215,7 +215,7 @@
         }
 
         function handleMapSelect(event) {
-            const url = event.target.value;
+            const url = event.target.value.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
             fetch(url).then(response => {
                 if (response.ok) {
                     return response.text();
