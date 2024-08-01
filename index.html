@@ -91,10 +91,11 @@
             left: 50%;
             transform: translateX(-50%);
         }
-    #upload-input {
+    #map-dropdown {
             position: absolute;
             top: 10px;
-            right: 150px;
+            left: 75%;
+            transform: translateX(-50%);
         }
     </style>
 </head>
@@ -106,61 +107,12 @@
     </div>
     <select id="map-dropdown">
         <option value="" selected disabled>Select Map</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/AlabamaMunicipalities.svg">Alabama Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/AlaskaMunicipalities.svg">Alaska Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/ArizonaMunicipalities.svg">Arizona Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/ArkansasMunicipalities.svg">Arkansas Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/CaliforniaMunicipalities.svg">California Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/ColoradoMunicipalities.svg">Colorado Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/ConnecticutMunicipalities.svg">Connecticut Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/DelawareMunicipalities.svg">Delaware Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/FloridaMunicipalities.svg">Florida Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/GeorgiaMunicipalities.svg">Georgia Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/HawaiiMunicipalities.svg">Hawaii Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/IdahoMunicipalities.svg">Idaho Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/IllinoisMunicipalities.svg">Illinois Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/IndianaMunicipalities.svg">Indiana Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/IowaMunicipalities.svg">Iowa Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/KansasMunicipalities.svg">Kansas Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/KentuckyMunicipalities.svg">Kentucky Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/LouisianaMunicipalities.svg">Louisiana Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/MaineMunicipalities.svg">Maine Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/MarylandMunicipalities.svg">Maryland Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/MassachusettsMunicipalities.svg">Massachusetts Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/MichiganMunicipalities.svg">Michigan Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/MinnesotaMunicipalities.svg">Minnesota Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/MississippiMunicipalities.svg">Mississippi Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/MissouriMunicipalities.svg">Missouri Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/MontanaMunicipalities.svg">Montana Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/NebraskaMunicipalities.svg">Nebraska Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/NevadaMunicipalities.svg">Nevada Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/NewHampshireMunicipalities.svg">New Hampshire Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/NewJerseyMunicipalities.svg">New Jersey Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/NewMexicoMunicipalities.svg">New Mexico Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/NewYorkMunicipalities.svg">New York Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/NorthCarolinaMunicipalities.svg">North Carolina Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/NorthDakotaMunicipalities.svg">North Dakota Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/OhioMunicipalities.svg">Ohio Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/OklahomaMunicipalities.svg">Oklahoma Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/OregonMunicipalities.svg">Oregon Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/PennsylvaniaMunicipalities.svg">Pennsylvania Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/RhodeIslandMunicipalities.svg">Rhode Island Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/SouthCarolinaMunicipalities.svg">South Carolina Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/SouthDakotaMunicipalities.svg">South Dakota Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/TennesseeMunicipalities.svg">Tennessee Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/TexasMunicipalities.svg">Texas Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/UtahMunicipalities.svg">Utah Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/VermontMunicipalities.svg">Vermont Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/VirginiaMunicipalities.svg">Virginia Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/WashingtonMunicipalities.svg">Washington Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/WestVirginiaMunicipalities.svg">West Virginia Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/WisconsinMunicipalities.svg">Wisconsin Municipalities</option>
-        <option value="https://github.com/bradinator33/bradinator33.github.io/blob/60db8e5f617133d7b5fb76411c59f8a87e0ce4ed/maps/WyomingMunicipalities.svg">Wyoming Municipalities</option>
+        <option value="https://raw.githubusercontent.com/bradinator33/bradinator33.github.io/0c8e4215b6063392297182772a2729c56c7267c5/maps/MinnesotaMunicipalities.svg">Minnesota Municipalities</option>
     </select>
-    <input type="color" id="color-input">
+    <input type="color" id="color-input" value="#ff0000">
+    <input type="file" id="upload-input" accept=".svg" style="display:none;">
+    <button id="upload-button">Upload SVG</button>
     <button id="download-button">Download SVG</button>
-    <input type="file" id="upload-input" accept=".svg">
-
     <div id="svg-container"></div>
 
     <script>
@@ -173,6 +125,8 @@
 
         document.getElementById('mode-slider').addEventListener('input', handleModeChange);
         document.getElementById('color-input').addEventListener('input', handleColorChange);
+        document.getElementById('upload-button').addEventListener('click', () => document.getElementById('upload-input').click());
+        document.getElementById('upload-input').addEventListener('change', handleFileUpload);
         document.getElementById('download-button').addEventListener('click', downloadSvg);
         document.getElementById('map-dropdown').addEventListener('change', handleMapSelect);
 
@@ -200,6 +154,19 @@
 
         function handleColorChange(event) {
             selectedColor = event.target.value;
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file && file.type === 'image/svg+xml') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    displaySvg(e.target.result);
+                };
+                reader.readAsText(file);
+            } else {
+                alert('Please upload a valid SVG file.');
+            }
         }
 
         function handleMapSelect(event) {
@@ -295,37 +262,33 @@
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            URL.revokeObjectURL(url);
         }
 
         let isPanning = false;
-        let startX, startY;
 
         function startPan(event) {
             if (mode === 'zoom') {
                 isPanning = true;
-                startX = event.pageX;
-                startY = event.pageY;
-                event.preventDefault();
+                svgElement.style.cursor = 'grabbing';
+                panX = event.clientX;
+                panY = event.clientY;
             }
         }
 
         function doPan(event) {
-            if (isPanning && mode === 'zoom') {
-                const dx = event.pageX - startX;
-                const dy = event.pageY - startY;
-                panX += dx;
-                panY += dy;
-                svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
-                startX = event.pageX;
-                startY = event.pageY;
-                event.preventDefault();
+            if (mode === 'zoom' && isPanning) {
+                const dx = event.clientX - panX;
+                const dy = event.clientY - panY;
+                panX = event.clientX;
+                panY = event.clientY;
+                svgElement.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
             }
         }
 
         function endPan() {
             if (mode === 'zoom') {
                 isPanning = false;
+                svgElement.style.cursor = 'grab';
             }
         }
 
@@ -340,19 +303,6 @@
 
         // Initial mode setup
         setMode('color');
-
-        const defaultMapUrl = "https://raw.githubusercontent.com/bradinator33/bradinator33.github.io/0c8e4215b6063392297182772a2729c56c7267c5/maps/MinnesotaMunicipalities.svg";
-        fetch(defaultMapUrl).then(response => {
-            if (response.ok) {
-                return response.text();
-            } else {
-                throw new Error('Failed to load the default map file.');
-            }
-        }).then(svgContent => {
-            displaySvg(svgContent);
-        }).catch(error => {
-            alert(error.message);
-        });
     </script>
 </body>
 </html>
