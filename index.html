@@ -102,6 +102,17 @@
             display: block;
             text-align: right;
         }
+        #reset-zoom-button {
+            position: absolute;
+            top: 7px;
+            right: 65%;
+            padding: 5px 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -168,6 +179,7 @@
     <button id="download-button">Download SVG</button>
     <div id="svg-container"></div>
     <a href="https://www.patreon.com/Bradinator" target="_blank" id="support-me">Support Me/Download My Maps</a>
+    <button id="reset-zoom-button">Reset Zoom</button>
     <script>
         let mode = 'color';
         let svgElement;
@@ -181,6 +193,7 @@
         document.getElementById('download-button').addEventListener('click', downloadSvg);
         document.getElementById('map-dropdown').addEventListener('change', handleMapSelect);
         document.getElementById('upload-input').addEventListener('change', handleFileSelect);
+        document.getElementById('reset-zoom-button').addEventListener('click', handleResetZoom)
 
         function setMode(newMode) {
             mode = newMode;
@@ -234,6 +247,13 @@
             } else {
                 alert('Please upload a valid SVG file.');
             }
+        }
+        
+        function handleResetZoom {
+            scale = 1;
+                panX = 0;
+                panY = 0;
+                svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
         }
 
         function displaySvg(svgContent) {
