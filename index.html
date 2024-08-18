@@ -174,7 +174,7 @@
         let scale = 1;
         let panX = 0, panY = 0;
         let selectedColor = '#ff0000';
-        let originalColor = '#D2D2AF';
+        let originalColor = new Map();
 
         document.getElementById('mode-slider').addEventListener('input', handleModeChange);
         document.getElementById('color-input').addEventListener('input', handleColorChange);
@@ -296,7 +296,7 @@
             if (mode === 'color') {
                 const shape = event.target;
                 if (originalColors.has(shape)) {
-                    shape.style.fill = originalColors.get(shape);
+                    shape.style.fill = '#D2D2AF';
                 }
             }
         }
