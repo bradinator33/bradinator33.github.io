@@ -179,52 +179,13 @@
         document.getElementById('mode-slider').addEventListener('input', handleModeChange);
         document.getElementById('color-input').addEventListener('input', handleColorChange);
         document.getElementById('download-button').addEventListener('click', downloadSvg);
-        document.getElementById('map-dropdown').addEventListener('change', function () {
-            const selectedMap = this.value;
-            fetch(selectedMap)
-                .then(response => response.text())
-                .then(svgData => {
-                    svgContainer.innerHTML = svgData;
-                    const svg = svgContainer.querySelector('svg');
-                    svg.setAttribute('width', '100%');
-                    svg.setAttribute('height', '100%');
-    
-                    const shapes = svg.querySelectorAll('.shape');
-                    shapes.forEach(shape => {
-                        shape.addEventListener('click', function () {
-                            if (currentMode === 'color') {
-                                shape.setAttribute('fill', colorInput.value);
-                            }
-                        });
-    
-                        shape.addEventListener('contextmenu', function (event) {
-                            event.preventDefault();
-                            if (currentMode === 'color') {
-                                shape.removeAttribute('fill');
-                            }
-                        });
-                    });
-                })
-                .catch(error => console.error('Error loading SVG:', error));
-        });
-
-        setMode();
-
+        document.getElementById('map-dropdown').addEventListener('change', handleMapSelect);
         document.getElementById('upload-input').addEventListener('change', handleFileSelect);
 
-        function setMode() {
-            if (modeSlider.value === '0') {
-                currentMode = 'color';
-                modeIndicator.textContent = 'Color Mode';
-                svgContainer.classList.remove('zoomable');
-            } else {
-                currentMode = 'zoom';
-                modeIndicator.textContent = 'Zoom Mode';
-                svgContainer.classList.add('zoomable');
-            }
+        function setMode(newMode) {
+            mode = newMode;
+            updateMode();
         }
-
-        modeSlider.addEventListener('input', setMode);
 
         function updateMode() {
             if (mode === 'color') {
