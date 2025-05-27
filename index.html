@@ -46,14 +46,7 @@
             cursor: pointer;
             outline: none;
         }
-        .slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 25px;
-            height: 25px;
-            border-radius: 50%;
-            background: #4CAF50;
-            cursor: pointer;
-        }
+        .slider::-webkit-slider-thumb,
         .slider::-moz-range-thumb {
             width: 25px;
             height: 25px;
@@ -109,6 +102,10 @@
         <label for="mode-slider" class="slider-label">Mode:</label>
         <input type="range" id="mode-slider" class="slider" min="0" max="1" step="1" value="0">
         <span id="mode-indicator" class="mode-indicator">Color Mode</span>
+    </div>
+    <div class="slider-container">
+        <label for="group-deleter-checkbox" class="slider-label">Group Deleter:</label>
+        <input type="checkbox" id="group-deleter-checkbox">
     </div>
     <select id="map-dropdown">
         <option value="" selected disabled>Select Map</option>
@@ -168,6 +165,7 @@
     <button id="download-button">Download SVG</button>
     <div id="svg-container"></div>
     <a href="https://www.patreon.com/Bradinator" target="_blank" id="support-me">Support Me/Download My Maps</a>
+
     <script>
         let mode = 'color';
         let svgElement;
@@ -210,26 +208,14 @@
 
         function handleMapSelect(event) {
             const url = event.target.value;
-            fetch(url).then(response => {
-                if (response.ok) {
-                    return response.text();
-                } else {
-                    throw new Error('Failed to load the map file.');
-                }
-            }).then(svgContent => {
-                displaySvg(svgContent);
-            }).catch(error => {
-                alert(error.message);
-            });
+            fetch(url).then(res => res.text()).then(displaySvg).catch(err => alert(err.message));
         }
 
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (file && file.type === 'image/svg+xml') {
                 const reader = new FileReader();
-                reader.onload = function(e) {
-                    displaySvg(e.target.result);
-                };
+                reader.onload = e => displaySvg(e.target.result);
                 reader.readAsText(file);
             } else {
                 alert('Please upload a valid SVG file.');
@@ -263,6 +249,7 @@
                 shape.classList.add('shape');
                 shape.addEventListener('click', colorShape);
                 shape.addEventListener('contextmenu', revertColor);
+                shape.addEventListener('click', deleteGroup);
             });
         }
 
@@ -278,11 +265,12 @@
                 shape.classList.remove('shape');
                 shape.removeEventListener('click', colorShape);
                 shape.removeEventListener('contextmenu', revertColor);
+                shape.removeEventListener('click', deleteGroup);
             });
         }
 
         function colorShape(event) {
-            if (mode === 'color') {
+            if (mode === 'color' && !document.getElementById('group-deleter-checkbox').checked) {
                 const shape = event.target;
                 if (!originalColors.has(shape)) {
                     originalColors.set(shape, shape.style.fill || 'none');
@@ -293,11 +281,27 @@
 
         function revertColor(event) {
             event.preventDefault();
-            if (mode === 'color') {
+            if (mode === 'color' && !document.getElementById('group-deleter-checkbox').checked) {
                 const shape = event.target;
                 if (originalColors.has(shape)) {
                     shape.style.fill = originalColors.get(shape);
                 }
+            }
+        }
+
+        function deleteGroup(event) {
+            if (mode !== 'color') return;
+
+            const groupDeleterEnabled = document.getElementById('group-deleter-checkbox').checked;
+            if (!groupDeleterEnabled) return;
+
+            event.preventDefault();
+            const target = event.target;
+            const group = target.closest('g');
+            if (group && svgElement.contains(group)) {
+                group.remove();
+            } else {
+                target.remove();
             }
         }
 
@@ -349,29 +353,29 @@
         }
 
         function handleZoom(event) {
-            if (mode === 'zoom') {
-                event.preventDefault();
-                const delta = event.deltaY > 0 ? -0.1 : 0.1;
-                scale += delta;
-                scale = Math.min(Math.max(0.1, scale), 25);
-                svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
-            }
+            if (mode !== 'zoom') return;
+
+            event.preventDefault();
+            const delta = event.deltaY > 0 ? -0.1 : 0.1;
+            const oldScale = scale;
+            scale += delta;
+            scale = Math.min(Math.max(0.1, scale), 25);
+            const newScale = scale;
+
+            const rect = svgElement.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            
+            panX -= (mouseX - panX) * (newScale / oldScale - 1);
+            panY -= (mouseY - panY) * (newScale / oldScale - 1);
+
+            svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
         }
 
         setMode('color');
 
         const defaultMapUrl = "https://raw.githubusercontent.com/bradinator33/bradinator33.github.io/f08e6bcb63904b977e54cde814647b4c18e751a2/maps/AlabamaMunicipalities.svg";
-        fetch(defaultMapUrl).then(response => {
-            if (response.ok) {
-                return response.text();
-            } else {
-                throw new Error('Failed to load the default map file.');
-            }
-        }).then(svgContent => {
-            displaySvg(svgContent);
-        }).catch(error => {
-            alert(error.message);
-        });
+        fetch(defaultMapUrl).then(res => res.text()).then(displaySvg).catch(err => alert(err.message));
     </script>
 </body>
 </html>
