@@ -14,11 +14,16 @@
             background: #f0f0f0;
         }
         svg {
-            position: absolute;
-            top: 0;
-            left: 0;
+            width: 100%;
+            height: 100%;
+            transform-origin: 0 0;
             cursor: grab;
-            transition: transform 0.1s;
+            display: block;
+        }
+        .zoom-wrapper {
+            transform-origin: 0 0;
+            width: 100%;
+            height: 100%;
         }
         .shape {
             cursor: pointer;
@@ -163,6 +168,7 @@
     <input type="file" id="upload-input" accept=".svg">
     <input type="color" id="color-input" value="#ff0000">
     <button id="download-button">Download SVG</button>
+    <button id="reset-zoom-button" style="position:absolute; top:7px; right:150px; padding:5px 10px; background-color:#2196F3; color:white; border:none; border-radius:3px; cursor:pointer;"> Reset Zoom </button>
     <div id="svg-container"></div>
     <a href="https://www.patreon.com/Bradinator" target="_blank" id="support-me">Support Me/Download My Maps</a>
 
@@ -173,12 +179,14 @@
         let panX = 0, panY = 0;
         let selectedColor = '#ff0000';
         let originalColors = new Map();
+        let zoomWrapper = null;
 
         document.getElementById('mode-slider').addEventListener('input', handleModeChange);
         document.getElementById('color-input').addEventListener('input', handleColorChange);
         document.getElementById('download-button').addEventListener('click', downloadSvg);
         document.getElementById('map-dropdown').addEventListener('change', handleMapSelect);
         document.getElementById('upload-input').addEventListener('change', handleFileSelect);
+        document.getElementById('reset-zoom-button').addEventListener('click', resetZoom);
 
         function setMode(newMode) {
             mode = newMode;
@@ -224,15 +232,21 @@
 
         function displaySvg(svgContent) {
             const container = document.getElementById('svg-container');
-            container.innerHTML = svgContent;
-            svgElement = container.querySelector('svg');
+            container.innerHTML = '';
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'zoom-wrapper';
+            wrapper.innerHTML = svgContent;
+
+            container.appendChild(wrapper);
+            svgElement = wrapper.querySelector('svg');
+            zoomWrapper = wrapper; // store reference for transforms
+
             if (svgElement) {
                 svgElement.classList.add('zoomable');
                 const bbox = svgElement.getBBox();
                 svgElement.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
-                svgElement.setAttribute('width', '100%');
-                svgElement.setAttribute('height', '100%');
-                svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+                updateTransform();
                 updateMode();
             }
         }
@@ -339,9 +353,9 @@
                 const dy = event.pageY - startY;
                 panX += dx;
                 panY += dy;
-                svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
                 startX = event.pageX;
                 startY = event.pageY;
+                updateTransform();
                 event.preventDefault();
             }
         }
@@ -352,24 +366,43 @@
             }
         }
 
+        function resetZoom() {
+            scale = 1;
+            panX = 0;
+            panY = 0;
+            updateTransform();
+        }
+
+        function updateTransform() {
+            if (zoomWrapper) {
+                zoomWrapper.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+            }
+        }
+
         function handleZoom(event) {
             if (mode !== 'zoom') return;
-
             event.preventDefault();
-            const delta = event.deltaY > 0 ? -0.1 : 0.1;
-            const oldScale = scale;
-            scale += delta;
-            scale = Math.min(Math.max(0.1, scale), 25);
-            const newScale = scale;
 
-            const rect = svgElement.getBoundingClientRect();
+            const zoomIntensity = 0.1;
+            const scaleFactor = event.deltaY < 0 ? 1 + zoomIntensity : 1 - zoomIntensity;
+            const oldScale = scale;
+            const newScale = Math.min(Math.max(scale * scaleFactor, 0.1), 25);
+
+            if (newScale === scale) return;
+
+            const rect = zoomWrapper.getBoundingClientRect();
             const mouseX = event.clientX - rect.left;
             const mouseY = event.clientY - rect.top;
-            
-            panX -= (mouseX - panX) * (newScale / oldScale - 1);
-            panY -= (mouseY - panY) * (newScale / oldScale - 1);
 
-            svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+            const offsetX = (mouseX - panX) / scale;
+            const offsetY = (mouseY - panY) / scale;
+
+            scale = newScale;
+
+            panX = mouseX - offsetX * scale;
+            panY = mouseY - offsetY * scale;
+
+            updateTransform();
         }
 
         setMode('color');
@@ -379,3 +412,4 @@
     </script>
 </body>
 </html>
+
