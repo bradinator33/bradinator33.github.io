@@ -75,9 +75,31 @@
         #download-button {
             position: absolute;
             top: 7px;
-            right: 30px;
+            right: 150px;
             padding: 5px 10px;
             background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        #png-button {
+            position: absolute;
+            top: 7px;
+            right: 40px;
+            padding: 5px 10px;
+            background-color: #FF9800;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        #reset-zoom-button {
+            position: absolute;
+            top: 7px;
+            right: 270px;
+            padding: 5px 10px;
+            background-color: #2196F3;
             color: white;
             border: none;
             border-radius: 3px;
@@ -169,7 +191,8 @@
     <input type="file" id="upload-input" accept=".svg">
     <input type="color" id="color-input" value="#ff0000">
     <button id="download-button">Download SVG</button>
-    <button id="reset-zoom-button" style="position:absolute; top:7px; right:150px; padding:5px 10px; background-color:#2196F3; color:white; border:none; border-radius:3px; cursor:pointer;"> Reset Zoom </button>
+    <button id="png-button"> Save as PNG </button>
+    <button id="reset-zoom-button"> Reset Zoom </button>
     <div id="svg-container"></div>
     <a href="https://www.patreon.com/Bradinator" target="_blank" id="support-me">Support Me/Download My Maps</a>
 
@@ -181,6 +204,8 @@
         let selectedColor = '#ff0000';
         let originalColors = new Map();
         let zoomWrapper = null;
+        let isPanning = false;
+        let startX, startY;
 
         document.getElementById('mode-slider').addEventListener('input', handleModeChange);
         document.getElementById('color-input').addEventListener('input', handleColorChange);
@@ -188,6 +213,7 @@
         document.getElementById('map-dropdown').addEventListener('change', handleMapSelect);
         document.getElementById('upload-input').addEventListener('change', handleFileSelect);
         document.getElementById('reset-zoom-button').addEventListener('click', resetZoom);
+        document.getElementById('png-button').addEventListener('click', saveSvgAsPng);
 
         function setMode(newMode) {
             mode = newMode;
@@ -320,6 +346,49 @@
             }
         }
 
+        function saveSvgAsPng() {
+            if (!svgElement) return;
+
+            const clonedSvg = svgElement.cloneNode(true);
+
+            const viewBox = clonedSvg.getAttribute('viewBox');
+            if (!viewBox) {
+                alert("SVG doesn't have a viewBox defined.");
+                return;
+            }
+
+            const [x, y, width, height] = viewBox.split(' ').map(Number);
+
+            clonedSvg.setAttribute('width', width);
+            clonedSvg.setAttribute('height', height);
+
+            const svgString = new XMLSerializer().serializeToString(clonedSvg);
+            const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+
+                ctx.drawImage(img, 0, 0, width, height);
+                URL.revokeObjectURL(url);
+
+                canvas.toBlob(blob => {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'map.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }, 'image/png');
+            };
+
+            img.src = url;
+        }
+
         function downloadSvg() {
             if (!svgElement) return;
 
@@ -335,9 +404,6 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
-
-        let isPanning = false;
-        let startX, startY;
 
         function startPan(event) {
             if (mode === 'zoom') {
@@ -413,4 +479,3 @@
     </script>
 </body>
 </html>
-
