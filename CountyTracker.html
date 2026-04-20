@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoPackage Painter</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://unpkg.com/polylabel@1.1.0/polylabel.js"></script>
+
+    <style>
+        body { font-family: sans-serif; background-color: #fff; margin: 0; padding: 0; overflow: hidden; }
+        #map { height: calc(100vh - 60px); width: 100%; border-top: 1px solid #ccc; background-color: #f8f9fa; }
+        
+        #map.mode-paint .leaflet-interactive {
+            cursor: crosshair !important;
+        }
+
+        .control-panel {
+            background: #fdfdfd;
+            border: 1px solid #ccc;
+            width: 350px;
+            min-width: 250px;
+            max-width: 80vw;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1001;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            border-radius: 6px;
+        }
+
+        .resizer-h {
+            width: 6px;
+            height: 100%;
+            position: absolute;
+            right: 0;
+            top: 0;
+            cursor: col-resize;
+            z-index: 1002;
+            transition: background 0.2s;
+        }
+        .resizer-h:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .panel-header {
+            background: #f8f9fa;
+            padding: 12px;
+            border-bottom: 1px solid #ccc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .panel-content {
+            padding: 15px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .panel-content.hidden { display: none; }
+
+        label { display: block; font-weight: bold; font-size: 0.8rem; color: #444; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.025em; }
+        
+        button {
+            margin-top: 10px;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            background: #f3f4f6;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: bold;
+            border-radius: 4px;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        button:hover { background: #e5e7eb; }
+        button:disabled { color: #9ca3af; cursor: not-allowed; border-color: #e5e7eb; }
+
+        .btn-primary { background: #2563eb; color: white; border-color: #1d4ed8; }
+        .btn-primary:hover { background: #1d4ed8; }
+        
+        .btn-success { background: #10b981; color: white; border-color: #059669; }
+        .btn-success:hover { background: #059669; }
+
+        .nav-bar {
+            height: 60px;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .nav-controls { display: flex; align-items: center; gap: 15px; }
+
+        .upload-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin: 0;
+            width: auto;
+        }
+        .upload-btn:hover { background: #059669; }
+
+        .custom-label {
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            font-weight: 800;
+            font-size: 11px;
+            color: #111;
+            text-align: center;
+            text-shadow: -1.5px -1.5px 0 rgba(255,255,255,0.8), 1.5px -1.5px 0 rgba(255,255,255,0.8), -1.5px 1.5px 0 rgba(255,255,255,0.8), 1.5px 1.5px 0 rgba(255,255,255,0.8);
+        }
+        
+        .leaflet-tooltip-left.custom-label::before, .leaflet-tooltip-right.custom-label::before, 
+        .leaflet-tooltip-top.custom-label::before, .leaflet-tooltip-bottom.custom-label::before {
+            display: none !important;
+        }
+
+        .custom-label-scaled {
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            font-weight: 800;
+            color: #111;
+            text-align: center;
+            text-shadow: -1.5px -1.5px 0 rgba(255,255,255,0.8), 1.5px -1.5px 0 rgba(255,255,255,0.8), -1.5px 1.5px 0 rgba(255,255,255,0.8), 1.5px 1.5px 0 rgba(255,255,255,0.8);
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        .leaflet-tooltip-left.custom-label-scaled::before, .leaflet-tooltip-right.custom-label-scaled::before, 
+        .leaflet-tooltip-top.custom-label-scaled::before, .leaflet-tooltip-bottom.custom-label-scaled::before {
+            display: none !important;
+        }
+
+        .hover-info-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-top: 10px; }
+        .hover-info-table th { text-align: left; padding: 4px; color: #6b7280; border-bottom: 1px solid #f3f4f6; width: 40%; vertical-align: top;}
+        .hover-info-table td { text-align: left; padding: 4px; font-weight: bold; color: #111827; border-bottom: 1px solid #f3f4f6; word-break: break-word;}
+        
+        .radio-group { display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap; }
+        .radio-group label { margin: 0; display: flex; align-items: center; gap: 5px; font-weight: normal; text-transform: none; font-size: 0.9rem; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <nav class="nav-bar">
+        <div style="flex: 1; display: flex; align-items: center; gap: 10px;">
+            <h1 style="margin:0; font-size: 1.1rem; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: -0.02em;">GeoPackage Painter</h1>
+        </div>
+
+        <div style="flex: 1; display: flex; justify-content: center; align-items: center; gap: 10px;">
+            <label for="preset-dropdown" style="margin:0; color:#475569; font-size:0.85rem; font-weight: bold; text-transform: uppercase;">Preset:</label>
+            <select id="preset-dropdown" style="padding: 6px 12px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.85rem; outline: none; background: #f8f9fa; cursor: pointer;">
+                <option value="">-- Select Continent --</option>
+                <option value="na">North America</option>
+                <option value="sa">South America</option>
+                <option value="eu">Europe</option>
+                <option value="af">Africa</option>
+                <option value="as">Asia</option>
+                <option value="oc">Oceania</option>
+            </select>
+        </div>
+
+        <div class="nav-controls" style="flex: 1; justify-content: flex-end;">
+            <span id="loading-indicator" style="display:none; font-size: 0.85rem; font-weight: bold; color: #3b82f6;">Processing...</span>
+            <input type="file" id="file-input" accept=".gpkg" style="display: none;" />
+            <button class="upload-btn" onclick="document.getElementById('file-input').click()">Upload GPKG</button>
+        </div>
+    </nav>
+
+    <div style="position: relative;">
+        <div id="map"></div>
+
+        <div class="control-panel" id="mainPanel">
+            <div class="resizer-h" id="panelResizer"></div>
+            
+            <div class="panel-header" onclick="togglePanel()">
+                <span style="font-weight: 800; font-size: 0.85rem; color: #334155; text-transform: uppercase;">Tools & Details</span>
+                <span id="gpkgStatus" style="font-size: 0.7rem; font-weight: bold; color: #ef4444;">No File Loaded</span>
+            </div>
+            
+            <div class="panel-content custom-scrollbar" id="panelContent">
+                
+                <div id="tools-section" style="opacity: 0.5; pointer-events: none;">
+                    <label style="margin-top:0;">Interaction Mode</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="mode" value="inspect" checked> Inspect</label>
+                        <label><input type="radio" name="mode" value="paint"> Paint</label>
+                    </div>
+
+                    <label>Paint Color</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="color" id="color-picker" value="#3b82f6" style="height: 35px; width: 60px; padding: 0; border: 1px solid #ccc; cursor: pointer;">
+                        <span style="font-size: 0.75rem; color: #6b7280;">Left-click to paint, Right-click to erase</span>
+                    </div>
+                    
+                    <label>Isolate Country(s)</label>
+                    <div id="country-filter-container" class="custom-scrollbar" style="max-height: 160px; overflow-y: auto; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
+                        <div style="font-size: 0.75rem; color: #9ca3af; font-style: italic;">Load a file to see options.</div>
+                    </div>
+
+                    <label>Legend</label>
+                    <div id="legend-container" class="custom-scrollbar" style="max-height: 140px; overflow-y: auto; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 6px;">
+                        <div style="font-size: 0.75rem; color: #9ca3af; font-style: italic;">No custom colors painted yet.</div>
+                    </div>
+
+                    <label>Map Labels</label>
+                    <div class="radio-group" style="margin-bottom: 5px;">
+                        <label><input type="radio" name="label-mode" value="hidden" checked> Hidden</label>
+                        <label><input type="radio" name="label-mode" value="default"> Large</label>
+                        <label><input type="radio" name="label-mode" value="scaled"> Small</label>
+                    </div>
+
+                    <label>Import / Export Data</label>
+                    <input type="file" id="csv-input" accept=".csv" style="display: none;" />
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 5px;">
+                        <button id="btn-import-csv" style="margin-top:0;">Load CSV</button>
+                        <button id="btn-export-png" class="btn-primary" style="margin-top:0;">Export PNG</button>
+                        <button id="btn-export-csv" class="btn-primary" style="margin-top:0;">Export CSV</button>
+                        <button id="btn-export-gpkg" class="btn-success" style="margin-top:0;">Export GPKG</button>
+                    </div>
+                </div>
+
+                <div style="margin-top: 25px; border-top: 2px solid #f3f4f6; padding-top: 15px;">
+                    <label style="margin-top: 0;">Feature Details</label>
+                    <div id="hover-content" style="font-size: 0.8rem; color: #94a3b8; font-style: italic;">Hover over a region to view details.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let map;
+        let baseMapLayer;
+        let labelsLayerGroup;
+        let SQL;
+        let currentDb = null;
+        let geoJsonLayer = null;
+        let allFeatures = [];
+        let currentMode = 'inspect'; 
+        let currentLabelMode = 'hidden'; 
+        let legendNames = {}; 
+        let currentFilterKey = '_tableName'; 
+
+        function init() {
+            map = L.map('map', { zoomControl: false }).setView([39.8283, -98.5795], 4);
+            L.control.zoom({ position: 'topleft' }).addTo(map);
+
+            baseMapLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
+
+            labelsLayerGroup = L.layerGroup().addTo(map);
+
+            initResizer();
+            initEngine();
+
+            document.getElementById('file-input').addEventListener('change', handleFileUpload);
+            document.getElementById('preset-dropdown').addEventListener('change', handlePresetSelection);
+            
+            document.getElementById('btn-import-csv').addEventListener('click', () => document.getElementById('csv-input').click());
+            document.getElementById('csv-input').addEventListener('change', handleCSVUpload);
+            document.getElementById('btn-export-png').addEventListener('click', exportPNG);
+            document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
+            document.getElementById('btn-export-gpkg').addEventListener('click', exportGPKG);
+
+            document.getElementById('map').addEventListener('contextmenu', e => {
+                if (currentMode === 'paint') e.preventDefault();
+            });
+
+            document.querySelectorAll('input[name="mode"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    currentMode = e.target.value;
+                    const mapDiv = document.getElementById('map');
+                    if (currentMode === 'paint') mapDiv.classList.add('mode-paint');
+                    else mapDiv.classList.remove('mode-paint');
+                });
+            });
+
+            document.querySelectorAll('input[name="label-mode"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    currentLabelMode = e.target.value;
+                    updateLabels();
+                });
+            });
+
+            map.on('zoomend', () => {
+                if (currentLabelMode === 'scaled') {
+                    updateLabels();
+                }
+            });
+        }
+
+        function initResizer() {
+            const panel = document.getElementById('mainPanel');
+            const resizer = document.getElementById('panelResizer');
+            let isResizing = false;
+
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                e.preventDefault();
+                document.body.style.cursor = 'col-resize';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const newWidth = e.clientX - panel.getBoundingClientRect().left;
+                if (newWidth >= 250 && newWidth <= window.innerWidth * 0.8) {
+                    panel.style.width = `${newWidth}px`;
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.style.cursor = 'default';
+                }
+            });
+        }
+
+        function togglePanel() {
+            document.getElementById('panelContent').classList.toggle('hidden');
+        }
+
+        function setLoading(isActive, text="Processing...") {
+            const loader = document.getElementById('loading-indicator');
+            if(isActive) {
+                loader.innerText = text;
+                loader.style.display = 'inline';
+            } else {
+                loader.style.display = 'none';
+            }
+        }
+
+        async function initEngine() {
+            setLoading(true, "Loading Engine...");
+            try {
+                const sqlPromise = initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}` });
+                SQL = await sqlPromise;
+                
+                proj4.defs([
+                    ["EPSG:54030", "+proj=robin +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"],
+                    ["ESRI:54030", "+proj=robin +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"],
+                    ["EPSG:3857", "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"]
+                ]);
+                setLoading(false);
+            } catch (e) {
+                console.error(e);
+                document.getElementById('gpkgStatus').innerText = "Engine Load Failed";
+            }
+        }
+
+        function parseWKB(buffer, converter, is3857Fallback) {
+            const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+            let offset = 0;
+            let forceWebMercator = is3857Fallback;
+            let flippedLatLon = false;
+            let checkedHeuristics = false;
+
+            function readGeometry() {
+                if (offset >= view.byteLength) return null;
+                const le = view.getUint8(offset) === 1; offset += 1;
+                let geomType = view.getUint32(offset, le); offset += 4;
+                let hasZ = false, hasM = false;
+
+                if (geomType & 0x80000000) { hasZ = true; geomType &= 0x7FFFFFFF; }
+                if (geomType & 0x40000000) { hasM = true; geomType &= 0xBFFFFFFF; }
+                if (geomType >= 1000 && geomType < 2000) { hasZ = true; geomType -= 1000; }
+                else if (geomType >= 2000 && geomType < 3000) { hasM = true; geomType -= 2000; }
+                else if (geomType >= 3000 && geomType < 4000) { hasZ = true; hasM = true; geomType -= 3000; }
+
+                function readCoord() {
+                    let x = view.getFloat64(offset, le); offset += 8;
+                    let y = view.getFloat64(offset, le); offset += 8;
+                    if (hasZ) offset += 8;
+                    if (hasM) offset += 8;
+                    
+                    if (converter) {
+                        try {
+                            const pt = converter.forward([x, y]);
+                            return [pt[0], Math.max(-90, Math.min(90, pt[1]))];
+                        } catch (e) {} 
+                    }
+
+                    if (!checkedHeuristics && !forceWebMercator) {
+                        if (Math.abs(x) > 1000 || Math.abs(y) > 1000) forceWebMercator = true;
+                        else if (Math.abs(y) > 90 && Math.abs(y) <= 360 && Math.abs(x) <= 90) flippedLatLon = true;
+                        checkedHeuristics = true;
+                    }
+
+                    if (forceWebMercator) {
+                        const a = 6378137.0;
+                        const lon = x * 180 / Math.PI / a;
+                        const lat = (Math.PI / 2 - 2 * Math.atan(Math.exp(-y / a))) * 180 / Math.PI;
+                        return [lon, Math.max(-90, Math.min(90, lat))];
+                    } else if (flippedLatLon) {
+                        return [y, x];
+                    }
+                    return [x, y];
+                }
+
+                let coords;
+                switch (geomType) {
+                    case 1: return { type: "Point", coordinates: readCoord() };
+                    case 2:
+                        const numPoints = view.getUint32(offset, le); offset += 4;
+                        coords = []; for (let i = 0; i < numPoints; i++) coords.push(readCoord());
+                        return { type: "LineString", coordinates: coords };
+                    case 3:
+                        const numRings = view.getUint32(offset, le); offset += 4;
+                        coords = [];
+                        for (let i = 0; i < numRings; i++) {
+                            const numRingPoints = view.getUint32(offset, le); offset += 4;
+                            const ring = []; for (let j = 0; j < numRingPoints; j++) ring.push(readCoord());
+                            coords.push(ring);
+                        }
+                        return { type: "Polygon", coordinates: coords };
+                    case 4: case 5: case 6:
+                        const numGeoms = view.getUint32(offset, le); offset += 4;
+                        coords = [];
+                        for (let i = 0; i < numGeoms; i++) {
+                            const subGeom = readGeometry();
+                            if (subGeom) coords.push(subGeom.coordinates);
+                        }
+                        return { type: geomType === 4 ? "MultiPoint" : (geomType === 5 ? "MultiLineString" : "MultiPolygon"), coordinates: coords };
+                    case 7:
+                        const nGeoms = view.getUint32(offset, le); offset += 4;
+                        const geoms = []; for (let i = 0; i < nGeoms; i++) geoms.push(readGeometry());
+                        return { type: "GeometryCollection", geometries: geoms };
+                    default: return null;
+                }
+            }
+            return readGeometry();
+        }
+
+        function parseGeoPackageGeom(uint8Array, converter, is3857Fallback) {
+            const magic = uint8Array[0] === 0x47 && uint8Array[1] === 0x50;
+            if (!magic) return null;
+            const flags = uint8Array[3];
+            if ((flags & 0x10) === 0x10) return null;
+
+            const envelopeIndicator = (flags >> 1) & 0x07;
+            let envelopeSize = 0;
+            if (envelopeIndicator === 1) envelopeSize = 32;
+            else if (envelopeIndicator === 2 || envelopeIndicator === 3) envelopeSize = 48;
+            else if (envelopeIndicator === 4) envelopeSize = 64;
+
+            return parseWKB(uint8Array.subarray(8 + envelopeSize), converter, is3857Fallback);
+        }
+
+        async function loadGeoPackage(arrayBuffer) {
+            try {
+                if (currentDb) currentDb.close();
+                currentDb = new SQL.Database(new Uint8Array(arrayBuffer));
+                
+                const res = currentDb.exec("SELECT table_name, identifier FROM gpkg_contents WHERE data_type = 'features'");
+                if (res.length === 0) throw new Error("No feature data found.");
+                
+                allFeatures = [];
+                legendNames = {}; 
+
+                for (const row of res[0].values) {
+                    const tableName = row[0];
+
+                    let geomColName, srsId, srsOrgId;
+                    try {
+                        const metaRes = currentDb.exec(`SELECT c.column_name, c.srs_id, s.organization_coordsys_id FROM gpkg_geometry_columns c LEFT JOIN gpkg_spatial_ref_sys s ON c.srs_id = s.srs_id WHERE c.table_name = '${tableName}'`);
+                        if (metaRes.length === 0) continue;
+                        geomColName = metaRes[0].values[0][0]; srsId = metaRes[0].values[0][1]; srsOrgId = metaRes[0].values[0][2];
+                    } catch (e) {
+                        const metaRes = currentDb.exec(`SELECT column_name, srs_id FROM gpkg_geometry_columns WHERE table_name = '${tableName}'`);
+                        if (metaRes.length === 0) continue;
+                        geomColName = metaRes[0].values[0][0]; srsId = metaRes[0].values[0][1];
+                    }
+                    
+                    const is3857Fallback = (srsId === 3857 || srsOrgId === 3857 || srsId === 900913 || srsOrgId === 900913 || srsId === 102100);
+
+                    let converter = null;
+                    if (srsId !== 4326 && srsId !== 0) {
+                        try {
+                            const defRes = currentDb.exec(`SELECT definition FROM gpkg_spatial_ref_sys WHERE srs_id = ${srsId}`);
+                            const wktDef = (defRes.length > 0 && defRes[0].values[0][0]) ? defRes[0].values[0][0] : null;
+                            if (proj4.defs('EPSG:' + srsId)) converter = proj4('EPSG:' + srsId, 'EPSG:4326');
+                            else if (proj4.defs('ESRI:' + srsId)) converter = proj4('ESRI:' + srsId, 'EPSG:4326');
+                            else if (wktDef && wktDef !== 'undefined') converter = proj4(wktDef, 'EPSG:4326');
+                        } catch (e) {}
+                    }
+
+                    const query = `SELECT rowid as _sqlite_rowid, * FROM "${tableName}"`;
+                    const stmt = currentDb.prepare(query);
+                    
+                    while (stmt.step()) {
+                        const featureData = stmt.getAsObject();
+                        const geomBlob = featureData[geomColName];
+                        delete featureData[geomColName]; 
+                        
+                        featureData._tableName = tableName; 
+
+                        if (geomBlob) {
+                            try {
+                                const geometry = parseGeoPackageGeom(geomBlob, converter, is3857Fallback);
+                                if (geometry) {
+                                    allFeatures.push({ type: "Feature", geometry: geometry, properties: featureData });
+                                }
+                            } catch (err) {}
+                        }
+                    }
+                    stmt.free();
+                }
+
+                if (allFeatures.length === 0) throw new Error("No geometries extracted.");
+
+                document.getElementById('gpkgStatus').innerText = `${allFeatures.length} Features Loaded`;
+                document.getElementById('gpkgStatus').style.color = '#10b981';
+                document.getElementById('tools-section').style.opacity = '1';
+                document.getElementById('tools-section').style.pointerEvents = 'auto';
+
+                populateCountryFilter();
+                applyCountryFilter();
+                updateLegendUI();
+
+            } catch (e) {
+                console.error(e);
+                document.getElementById('gpkgStatus').innerText = "Parse Error";
+            }
+        }
+
+        function populateCountryFilter() {
+            const container = document.getElementById('country-filter-container');
+            if (allFeatures.length === 0) {
+                container.innerHTML = `<div style="font-size: 0.75rem; color: #9ca3af; font-style: italic;">Load a file to see options.</div>`;
+                return;
+            }
+
+            let filterKey = '_tableName';
+            let categories = [...new Set(allFeatures.map(f => f.properties._tableName))].sort();
+
+            if (categories.length === 1) {
+                const sampleProps = allFeatures[0].properties;
+                const possibleKeys = ['admin', 'adm0_name', 'country', 'name_0', 'sovereignt'];
+                const foundKey = possibleKeys.find(k => Object.keys(sampleProps).some(pk => pk.toLowerCase() === k));
+                
+                if (foundKey) {
+                    const actualKey = Object.keys(sampleProps).find(pk => pk.toLowerCase() === foundKey);
+                    filterKey = actualKey;
+                    categories = [...new Set(allFeatures.map(f => f.properties[actualKey]))].filter(Boolean).sort();
+                }
+            }
+
+            currentFilterKey = filterKey;
+
+            let html = `
+                <div style="display: flex; gap: 5px; margin-bottom: 8px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+                    <button id="btn-select-all" style="margin:0; padding: 4px 8px; font-size: 0.7rem; flex: 1;">Select All</button>
+                    <button id="btn-deselect-all" style="margin:0; padding: 4px 8px; font-size: 0.7rem; flex: 1;">Deselect All</button>
+                </div>
+            `;
+
+            categories.forEach(c => {
+                html += `
+                <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; font-weight:normal; margin:0; margin-bottom:4px; text-transform:none; cursor:pointer;">
+                    <input type="checkbox" class="country-filter-cb" value="${c}" checked>
+                    ${c}
+                </label>
+                `;
+            });
+            
+            container.innerHTML = html;
+
+            document.querySelectorAll('.country-filter-cb').forEach(cb => {
+                cb.addEventListener('change', applyCountryFilter);
+            });
+
+            document.getElementById('btn-select-all').addEventListener('click', () => {
+                document.querySelectorAll('.country-filter-cb').forEach(cb => cb.checked = true);
+                applyCountryFilter();
+            });
+            document.getElementById('btn-deselect-all').addEventListener('click', () => {
+                document.querySelectorAll('.country-filter-cb').forEach(cb => cb.checked = false);
+                applyCountryFilter();
+            });
+        }
+
+        function applyCountryFilter() {
+            const checked = new Set(Array.from(document.querySelectorAll('.country-filter-cb:checked')).map(cb => cb.value));
+            const filteredFeatures = allFeatures.filter(f => checked.has(String(f.properties[currentFilterKey])));
+            
+            renderMapLayer({ type: "FeatureCollection", features: filteredFeatures });
+        }
+
+        async function handlePresetSelection(e) {
+            const val = e.target.value;
+            if (!val) return;
+            
+            let url = "";
+            if (val === "na") {
+                url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/NorthAmerica.gpkg";
+            } else {
+                alert("Preset not yet configured for this continent.");
+                e.target.value = "";
+                return;
+            }
+
+            setLoading(true, "Downloading Preset...");
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("text/html")) {
+                     throw new Error("Received an HTML page instead of the raw file data. Ensure the preset link points directly to the raw .gpkg file and not a webpage preview.");
+                }
+
+                const arrayBuffer = await response.arrayBuffer();
+                setLoading(true, "Extracting GPKG...");
+                setTimeout(async () => {
+                    await loadGeoPackage(arrayBuffer);
+                    setLoading(false);
+                }, 50);
+            } catch (err) {
+                console.error(err);
+                alert("Failed to load preset:\n\n" + err.message);
+                setLoading(false);
+                e.target.value = ""; 
+            }
+        }
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('preset-dropdown').value = "";
+
+            setLoading(true, "Extracting GPKG...");
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                setTimeout(async () => {
+                    await loadGeoPackage(event.target.result);
+                    setLoading(false);
+                }, 50);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function getFeatureStyle(feature) {
+            if (feature.properties._paintedColor) {
+                return { fillColor: feature.properties._paintedColor, fillOpacity: 0.85, color: '#333', weight: 1.5 };
+            }
+            return { fillColor: '#cccccc', fillOpacity: 0.4, color: '#999999', weight: 1 };
+        }
+
+        function renderMapLayer(geoJsonData) {
+            if (geoJsonLayer) map.removeLayer(geoJsonLayer);
+
+            geoJsonLayer = L.geoJSON(geoJsonData, {
+                renderer: L.canvas({ padding: 0.5 }),
+                style: getFeatureStyle,
+                onEachFeature: (feature, layer) => {
+                    layer.on({
+                        mouseover: (e) => {
+                            const l = e.target;
+                            updateHoverInfo(l.feature.properties);
+                            if (currentMode === 'inspect') {
+                                l.setStyle({ weight: 3, color: '#111', fillOpacity: l.feature.properties._paintedColor ? 0.9 : 0.6 });
+                                l.bringToFront();
+                            } else if (currentMode === 'paint') {
+                                l.setStyle({ fillOpacity: 0.6 });
+                            }
+                        },
+                        mouseout: (e) => {
+                            clearHoverInfo();
+                            geoJsonLayer.resetStyle(e.target);
+                        },
+                        click: (e) => {
+                            if (currentMode === 'paint') {
+                                const selectedColor = document.getElementById('color-picker').value;
+                                const previousColor = e.target.feature.properties._paintedColor;
+                                
+                                if (previousColor !== selectedColor) {
+                                    e.target.feature.properties._paintedColor = selectedColor;
+                                    e.target.setStyle(getFeatureStyle(e.target.feature));
+                                    
+                                    if (!legendNames[selectedColor]) {
+                                        updateLegendUI();
+                                    }
+                                }
+                            }
+                        },
+                        contextmenu: (e) => {
+                            if (currentMode === 'paint') {
+                                if (e.target.feature.properties._paintedColor) {
+                                    delete e.target.feature.properties._paintedColor;
+                                    e.target.setStyle(getFeatureStyle(e.target.feature));
+                                    updateLegendUI(); 
+                                }
+                            }
+                        }
+                    });
+                }
+            }).addTo(map);
+
+            try { 
+                map.fitBounds(geoJsonLayer.getBounds(), { padding: [20, 20], animate: false }); 
+            } catch(e) {}
+            
+            updateLabels();
+        }
+
+        function updateLegendUI() {
+            if (allFeatures.length === 0) return;
+            
+            const uniqueColors = new Set();
+            allFeatures.forEach(f => {
+                if (f.properties._paintedColor) uniqueColors.add(f.properties._paintedColor);
+            });
+
+            const container = document.getElementById('legend-container');
+            if (uniqueColors.size === 0) {
+                container.innerHTML = `<div style="font-size: 0.75rem; color: #9ca3af; font-style: italic;">No custom colors painted yet.</div>`;
+                return;
+            }
+
+            let html = '';
+            uniqueColors.forEach(c => {
+                if (!legendNames[c]) legendNames[c] = "Category " + (Object.keys(legendNames).length + 1);
+                html += `
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="width:16px; height:16px; border-radius:3px; background-color:${c}; border:1px solid #ccc; flex-shrink:0;"></div>
+                    <input type="text" value="${legendNames[c]}" data-color="${c}" class="legend-input" style="flex:1; border:1px solid #e5e7eb; border-radius:3px; padding:3px 6px; font-size:0.75rem; outline:none; background:#fff;">
+                </div>`;
+            });
+            container.innerHTML = html;
+
+            document.querySelectorAll('.legend-input').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    legendNames[e.target.dataset.color] = e.target.value;
+                });
+            });
+        }
+
+        function createExportLegend() {
+            const uniqueColors = new Set();
+            if (geoJsonLayer) {
+                geoJsonLayer.eachLayer(layer => {
+                    if (layer.feature.properties._paintedColor) {
+                        uniqueColors.add(layer.feature.properties._paintedColor);
+                    }
+                });
+            }
+
+            if (uniqueColors.size === 0) return null;
+
+            const legendDiv = document.createElement('div');
+            legendDiv.style.position = 'absolute';
+            legendDiv.style.bottom = '20px';
+            legendDiv.style.right = '20px';
+            legendDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+            legendDiv.style.border = '2px solid #cbd5e1';
+            legendDiv.style.borderRadius = '8px';
+            legendDiv.style.padding = '12px';
+            legendDiv.style.fontFamily = 'sans-serif';
+            legendDiv.style.fontSize = '14px';
+            legendDiv.style.zIndex = '9999'; 
+            legendDiv.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+            legendDiv.style.pointerEvents = 'none'; 
+
+            let html = '<div style="font-weight: 900; margin-bottom: 10px; font-size: 16px; color: #1e293b;">Legend</div>';
+            html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+            
+            uniqueColors.forEach(c => {
+                const label = legendNames[c] || "Category";
+                html += `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 20px; height: 20px; border-radius: 4px; background-color: ${c}; border: 1px solid #94a3b8; flex-shrink: 0;"></div>
+                    <span style="color: #334155; font-weight: 600;">${label}</span>
+                </div>`;
+            });
+            html += '</div>';
+
+            legendDiv.innerHTML = html;
+            return legendDiv;
+        }
+
+        function updateHoverInfo(props) {
+            const content = document.getElementById('hover-content');
+            const nameRegex = /(name|admin|identifier|label|title|nomgeo)/i;
+            const nameKey = Object.keys(props).find(k => nameRegex.test(k) && !k.startsWith('_'));
+            
+            let html = '';
+            if (nameKey && props[nameKey]) {
+                html += `<div style="font-size: 1.1rem; font-weight: 900; color: #1e3a8a; margin-bottom: 5px;">${props[nameKey]}</div>`;
+            }
+            
+            if (props._paintedColor && legendNames[props._paintedColor]) {
+                 html += `<div style="display:flex; align-items:center; gap:5px; margin-bottom:10px;">
+                    <span style="display:inline-block; width:10px; height:10px; background-color:${props._paintedColor}; border-radius:50%; border:1px solid #ccc;"></span>
+                    <span style="font-size:0.8rem; font-weight:bold; color:#475569;">${legendNames[props._paintedColor]}</span>
+                 </div>`;
+            }
+            
+            html += `<table class="hover-info-table">`;
+            for (const [key, value] of Object.entries(props)) {
+                if (key.startsWith('_') || key === nameKey) continue; 
+                let displayVal = value ?? '<i style="color:#9ca3af">null</i>';
+                html += `<tr><th>${key}</th><td>${displayVal}</td></tr>`;
+            }
+            html += `</table>`;
+            content.innerHTML = html;
+        }
+
+        function clearHoverInfo() {
+            document.getElementById('hover-content').innerHTML = `<div style="font-size: 0.8rem; color: #94a3b8; font-style: italic;">Hover over a region to view details.</div>`;
+        }
+
+        function updateLabels() {
+            labelsLayerGroup.clearLayers();
+            if (!geoJsonLayer || currentLabelMode === 'hidden') return;
+
+            const nameRegex = /(name|admin|identifier|label|title|nomgeo)/i;
+
+            geoJsonLayer.eachLayer(layer => {
+                layer.unbindTooltip();
+
+                if (currentLabelMode === 'hidden') return;
+
+                const props = layer.feature.properties;
+                const nameKey = Object.keys(props).find(k => nameRegex.test(k) && !k.startsWith('_'));
+                const nameText = nameKey ? String(props[nameKey]) : "Unnamed";
+
+                if (currentLabelMode === 'default') {
+                    const centerLatLng = layer.getBounds().getCenter();
+                    const tooltip = L.tooltip({ permanent: true, direction: 'center', className: 'custom-label' })
+                        .setLatLng(centerLatLng)
+                        .setContent(nameText);
+                    labelsLayerGroup.addLayer(tooltip);
+                } else if (currentLabelMode === 'scaled') {
+                    const geom = layer.feature.geometry;
+                    
+                    let bestPt = props._visualCenter;
+                    let maxDist = props._maxDistDeg;
+
+                    if (bestPt === undefined) {
+                        maxDist = -1;
+                        if (geom.type === 'Polygon') {
+                            try {
+                                const pt = polylabel(geom.coordinates, 0.001); 
+                                bestPt = pt;
+                                maxDist = pt.distance;
+                            } catch(e) {}
+                        } else if (geom.type === 'MultiPolygon') {
+                            geom.coordinates.forEach(poly => {
+                                try {
+                                    const pt = polylabel(poly, 0.001);
+                                    if (pt.distance > maxDist) { maxDist = pt.distance; bestPt = pt; }
+                                } catch(e) {}
+                            });
+                        }
+                        props._visualCenter = bestPt || null;
+                        props._maxDistDeg = maxDist > 0 ? maxDist : 0;
+                    }
+
+                    let centerLatLng;
+                    if (props._visualCenter) {
+                        centerLatLng = L.latLng(props._visualCenter[1], props._visualCenter[0]);
+                        
+                        const p1 = map.latLngToLayerPoint(centerLatLng);
+                        const p2 = map.latLngToLayerPoint(L.latLng(centerLatLng.lat, centerLatLng.lng + props._maxDistDeg));
+                        const radiusPx = Math.abs(p2.x - p1.x);
+
+                        const charCount = nameText.length;
+                        
+                        const safeWidthPx = radiusPx * 1.8; 
+                        
+                        let calculatedSize = Math.min(safeWidthPx / Math.max(1, (charCount * 0.55)), radiusPx * 1.2);
+                        calculatedSize = Math.max(4, Math.min(calculatedSize, 120)); 
+
+                        if (calculatedSize >= 5) {
+                            const styledText = `<div style="font-size: ${calculatedSize}px; line-height: 1; white-space: nowrap;">${nameText}</div>`;
+                            const tooltip = L.tooltip({ permanent: true, direction: 'center', className: 'custom-label-scaled' })
+                                .setLatLng(centerLatLng)
+                                .setContent(styledText);
+                            labelsLayerGroup.addLayer(tooltip);
+                        }
+                    } else {
+                        centerLatLng = layer.getBounds().getCenter();
+                        const tooltip = L.tooltip({ permanent: true, direction: 'center', className: 'custom-label-scaled' })
+                            .setLatLng(centerLatLng)
+                            .setContent(`<div style="font-size: 8px;">${nameText}</div>`);
+                        labelsLayerGroup.addLayer(tooltip);
+                    }
+                }
+            });
+        }
+
+        function exportPNG() {
+            if (!geoJsonLayer) return;
+            setLoading(true, "Generating PNG...");
+
+            const mapEl = document.getElementById('map');
+            const tilePane = document.querySelector('.leaflet-tile-pane');
+            const controlPane = document.querySelector('.leaflet-control-container');
+            
+            const origMapBg = mapEl.style.background;
+            
+            if (tilePane) tilePane.style.display = 'none';
+            if (controlPane) controlPane.style.display = 'none';
+            mapEl.style.background = 'transparent';
+            
+            const exportLegend = createExportLegend();
+            if (exportLegend) {
+                mapEl.appendChild(exportLegend);
+            }
+
+            setTimeout(() => {
+                html2canvas(mapEl, {
+                    backgroundColor: null, 
+                    useCORS: true,
+                    scale: window.devicePixelRatio || 2, 
+                    logging: false
+                }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = 'painted_map_viewport.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    
+                    if (tilePane) tilePane.style.display = '';
+                    if (controlPane) controlPane.style.display = '';
+                    mapEl.style.background = origMapBg;
+                    if (exportLegend && exportLegend.parentNode) {
+                        exportLegend.parentNode.removeChild(exportLegend);
+                    }
+                    setLoading(false);
+                }).catch(err => {
+                    console.error("Export Error: ", err);
+                    alert("Failed to capture PNG.");
+                    if (tilePane) tilePane.style.display = '';
+                    if (controlPane) controlPane.style.display = '';
+                    mapEl.style.background = origMapBg;
+                    if (exportLegend && exportLegend.parentNode) {
+                        exportLegend.parentNode.removeChild(exportLegend);
+                    }
+                    setLoading(false);
+                });
+            }, 300);
+        }
+
+        function handleCSVUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (allFeatures.length === 0) {
+                alert("Please load a GPKG preset or file first.");
+                e.target.value = '';
+                return;
+            }
+
+            setLoading(true, "Applying CSV Colors...");
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const data = results.data;
+                    let matchCount = 0;
+                    
+                    data.forEach(row => {
+                        const color = row.Color_Hex || row._paintedColor || row.Color || row.color;
+                        if (!color) return; 
+
+                        const legend = row.Legend_Name || row._legendLabel || row.Legend || '';
+                        
+                        let matchedFeature = null;
+                        
+                        if (row.Match_ID !== undefined && allFeatures[row.Match_ID]) {
+                            matchedFeature = allFeatures[row.Match_ID];
+                        } 
+                        else if (row.Feature_Name) {
+                            matchedFeature = allFeatures.find(f => {
+                                const nameRegex = /(name|admin|identifier|label|title|nomgeo)/i;
+                                const nameKey = Object.keys(f.properties).find(k => nameRegex.test(k) && !k.startsWith('_'));
+                                return nameKey && String(f.properties[nameKey]) === String(row.Feature_Name);
+                            });
+                        }
+
+                        if (matchedFeature) {
+                            matchedFeature.properties._paintedColor = color;
+                            if (legend) legendNames[color] = legend;
+                            matchCount++;
+                        }
+                    });
+
+                    if (geoJsonLayer) {
+                        geoJsonLayer.eachLayer(layer => layer.setStyle(getFeatureStyle(layer.feature)));
+                    }
+                    
+                    updateLegendUI();
+                    
+                    setLoading(false);
+                    e.target.value = ''; 
+                    
+                    const prevStatus = document.getElementById('gpkgStatus').innerText;
+                    document.getElementById('gpkgStatus').innerText = `Matched ${matchCount} CSV Rows!`;
+                    setTimeout(() => { document.getElementById('gpkgStatus').innerText = prevStatus; }, 3000);
+                }
+            });
+        }
+
+        function exportCSV() {
+            if(allFeatures.length === 0) return;
+            setLoading(true, "Generating CSV...");
+            
+            setTimeout(() => {
+                let csv = "Match_ID,Layer,Feature_Name,Color_Hex,Legend_Name\n";
+                
+                allFeatures.forEach((f, index) => {
+                    const nameRegex = /(name|admin|identifier|label|title|nomgeo)/i;
+                    const nameKey = Object.keys(f.properties).find(k => nameRegex.test(k) && !k.startsWith('_'));
+                    let featureName = nameKey ? String(f.properties[nameKey]) : `Feature_${index}`;
+                    featureName = '"' + featureName.replace(/"/g, '""') + '"';
+                    
+                    let layerName = '"' + String(f.properties._tableName).replace(/"/g, '""') + '"';
+                    let color = f.properties._paintedColor || '';
+                    let legend = color && legendNames[color] ? '"' + legendNames[color].replace(/"/g, '""') + '"' : '';
+                    
+                    csv += `${index},${layerName},${featureName},${color},${legend}\n`;
+                });
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'painted_data.csv';
+                a.click();
+                setLoading(false);
+            }, 50);
+        }
+
+        function exportGPKG() {
+            if(!currentDb || allFeatures.length === 0) return;
+            setLoading(true, "Compiling GPKG...");
+            
+            setTimeout(() => {
+                try {
+                    let tables = [...new Set(allFeatures.map(f => f.properties._tableName))];
+                    tables.forEach(t => {
+                        try { currentDb.exec(`ALTER TABLE "${t}" ADD COLUMN painted_color TEXT`); } catch(e){}
+                        try { currentDb.exec(`ALTER TABLE "${t}" ADD COLUMN legend_label TEXT`); } catch(e){}
+                    });
+                    
+                    allFeatures.forEach(f => {
+                        if (f.properties._paintedColor) {
+                            const hex = f.properties._paintedColor;
+                            const label = legendNames[hex] ? legendNames[hex].replace(/'/g, "''") : "";
+                            currentDb.exec(`UPDATE "${f.properties._tableName}" SET painted_color = '${hex}', legend_label = '${label}' WHERE rowid = ${f.properties._sqlite_rowid}`);
+                        }
+                    });
+                    
+                    const data = currentDb.export();
+                    const blob = new Blob([data], {type: "application/geopackage+sqlite3"});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'painted_map.gpkg';
+                    a.click();
+                } catch(e) {
+                    alert("Export Error: " + e.message);
+                }
+                setLoading(false);
+            }, 50);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
