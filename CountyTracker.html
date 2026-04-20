@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Level 2 Subdivions Paint</title>
+    <title>GeoPackage Painter</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -180,16 +180,17 @@
             <select id="preset-dropdown" style="padding: 6px 12px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.85rem; outline: none; background: #f8f9fa; cursor: pointer;">
                 <option value="">-- Select Continent --</option>
                 <option value="na">North America</option>
-                <option value="sa">South America</option>
-                <option value="eu">Europe</option>
-                <option value="af">Africa</option>
-                <option value="as">Asia</option>
-                <option value="oc">Oceania</option>
+                <option value="sa">South America (not uploaded)</option>
+                <option value="eu">Europe (not uploaded)</option>
+                <option value="af">Africa (not uploaded)</option>
+                <option value="as">Asia (not uploaded)</option>
+                <option value="oc">Oceania (not uploaded)</option>
             </select>
         </div>
 
         <div class="nav-controls" style="flex: 1; justify-content: flex-end;">
             <span id="loading-indicator" style="display:none; font-size: 0.85rem; font-weight: bold; color: #3b82f6;">Processing...</span>
+            <button id="btn-show-stats" class="btn-primary" style="margin: 0; width: auto; padding: 8px 16px; border-radius: 6px;">Stats</button>
             <input type="file" id="file-input" accept=".gpkg" style="display: none;" />
             <button class="upload-btn" onclick="document.getElementById('file-input').click()">Upload GPKG</button>
         </div>
@@ -256,6 +257,19 @@
         </div>
     </div>
 
+    <!-- Stats Modal -->
+    <div id="stats-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 8px; width: 500px; max-width: 90vw; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <div style="padding: 15px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; border-radius: 8px 8px 0 0;">
+                <h2 style="margin: 0; font-weight: 900; font-size: 1.1rem; color: #1e293b; text-transform: uppercase;">Completion Stats</h2>
+                <button id="btn-close-stats" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
+            </div>
+            <div id="stats-container-modal" class="custom-scrollbar" style="padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px;">
+                <div style="font-size: 0.85rem; color: #9ca3af; font-style: italic; text-align: center;">Load a file to see stats.</div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let map;
         let baseMapLayer;
@@ -292,6 +306,15 @@
             document.getElementById('btn-export-png').addEventListener('click', exportPNG);
             document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
             document.getElementById('btn-export-gpkg').addEventListener('click', exportGPKG);
+
+            document.getElementById('btn-show-stats').addEventListener('click', () => {
+                document.getElementById('stats-modal').style.display = 'flex';
+                updateStatsUI();
+            });
+
+            document.getElementById('btn-close-stats').addEventListener('click', () => {
+                document.getElementById('stats-modal').style.display = 'none';
+            });
 
             document.getElementById('map').addEventListener('contextmenu', e => {
                 if (currentMode === 'paint') e.preventDefault();
@@ -547,6 +570,7 @@
                 populateCountryFilter();
                 applyCountryFilter();
                 updateLegendUI();
+                updateStatsUI();
 
             } catch (e) {
                 console.error(e);
@@ -615,6 +639,41 @@
             const filteredFeatures = allFeatures.filter(f => checked.has(String(f.properties[currentFilterKey])));
             
             renderMapLayer({ type: "FeatureCollection", features: filteredFeatures });
+        }
+
+        function updateStatsUI() {
+            const container = document.getElementById('stats-container-modal');
+            if (allFeatures.length === 0) {
+                container.innerHTML = `<div style="font-size: 0.85rem; color: #9ca3af; font-style: italic; text-align: center;">Load a file to see stats.</div>`;
+                return;
+            }
+
+            const stats = {};
+            allFeatures.forEach(f => {
+                const cat = f.properties[currentFilterKey] || 'Unknown';
+                if (!stats[cat]) stats[cat] = { total: 0, painted: 0 };
+                stats[cat].total++;
+                if (f.properties._paintedColor) stats[cat].painted++;
+            });
+
+            let html = '';
+            const sortedCats = Object.keys(stats).sort();
+            sortedCats.forEach(cat => {
+                const s = stats[cat];
+                const pct = s.total > 0 ? Math.round((s.painted / s.total) * 100) : 0;
+                html += `
+                <div style="margin-bottom: 4px;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#475569; font-weight:bold; margin-bottom:4px;">
+                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%;">${cat}</span>
+                        <span>${pct}% (${s.painted}/${s.total})</span>
+                    </div>
+                    <div style="width:100%; background:#e5e7eb; height:8px; border-radius:4px; overflow:hidden;">
+                        <div style="width:${pct}%; background:#3b82f6; height:100%; transition: width 0.3s ease;"></div>
+                    </div>
+                </div>`;
+            });
+
+            container.innerHTML = html;
         }
 
         async function handlePresetSelection(e) {
@@ -712,6 +771,7 @@
                                     if (!legendNames[selectedColor]) {
                                         updateLegendUI();
                                     }
+                                    updateStatsUI();
                                 }
                             }
                         },
@@ -721,6 +781,7 @@
                                     delete e.target.feature.properties._paintedColor;
                                     e.target.setStyle(getFeatureStyle(e.target.feature));
                                     updateLegendUI(); 
+                                    updateStatsUI();
                                 }
                             }
                         }
@@ -1021,6 +1082,7 @@
                     }
                     
                     updateLegendUI();
+                    updateStatsUI();
                     
                     setLoading(false);
                     e.target.value = ''; 
