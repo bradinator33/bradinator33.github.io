@@ -186,6 +186,7 @@
                 <option value="af">Africa (not uploaded)</option>
                 <option value="as">Asia (not uploaded)</option>
                 <option value="oc">Oceania (not uploaded)</option>
+                <option value="LGA">Australia LGAs</option>
             </select>
         </div>
 
@@ -684,6 +685,8 @@
             let url = "";
             if (val === "na") {
                 url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/NorthAmerica.gpkg";
+            } if (val === "LGA") {
+                url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/AustralianLGAs.gpkg";
             } else {
                 alert("Preset not yet configured for this continent.");
                 e.target.value = "";
