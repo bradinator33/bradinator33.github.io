@@ -180,6 +180,7 @@
             <label for="preset-dropdown" style="margin:0; color:#475569; font-size:0.85rem; font-weight: bold; text-transform: uppercase;">Preset:</label>
             <select id="preset-dropdown" style="padding: 6px 12px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.85rem; outline: none; background: #f8f9fa; cursor: pointer;">
                 <option value="">-- Select Map --</option>
+                <option value="wr1">World (1st Degree)</option>
                 <option value="na">North America (2nd Degree)</option>
                 <option value="sa">South America (not uploaded)</option>
                 <option value="eu">Europe (not uploaded)</option>
@@ -687,6 +688,8 @@
                 url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/Northamerica.gpkg";
             } else if (val === "LGA") {
                 url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/AustralianLGAs.gpkg";
+            } else if (val === "wr1") {
+                url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/WorldLvl1.gpkg";
             } else {
                 alert("Preset not yet configured for this continent.");
                 e.target.value = "";
