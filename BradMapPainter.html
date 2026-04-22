@@ -183,7 +183,7 @@
                 <option value="wr1">World (1st Degree)</option>
                 <option value="na">North America (2nd Degree)</option>
                 <option value="sa">South America (not uploaded)</option>
-                <option value="eu">Europe (not uploaded)</option>
+                <option value="eu">Europe (2nd Degree)</option>
                 <option value="af">Africa (not uploaded)</option>
                 <option value="as">Asia (not uploaded)</option>
                 <option value="oc">Oceania (not uploaded)</option>
@@ -260,7 +260,6 @@
         </div>
     </div>
 
-    <!-- Stats Modal -->
     <div id="stats-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
         <div style="background: white; border-radius: 8px; width: 500px; max-width: 90vw; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
             <div style="padding: 15px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; border-radius: 8px 8px 0 0;">
@@ -690,6 +689,8 @@
                 url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/AustralianLGAs.gpkg";
             } else if (val === "wr1") {
                 url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/WorldLvl1.gpkg";
+            } else if (val === "eu") {
+                url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/Europe.gpkg";
             } else {
                 alert("Preset not yet configured for this continent.");
                 e.target.value = "";
