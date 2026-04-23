@@ -187,6 +187,7 @@
                 <option value="af">Africa (not uploaded)</option>
                 <option value="as">Asia (not uploaded)</option>
                 <option value="oc">Oceania (not uploaded)</option>
+                <option value="us3">United States (County Divisions)</option>
                 <option value="jp2">Japan (2nd Degree)</option>
                 <option value="LGA">Australia LGAs</option>
             </select>
@@ -694,6 +695,8 @@
                 url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/Europe.gpkg";
             } else if (val === "jp2") {
                 url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/JapanLvl2.gpkg";
+            } else if (val === "us3") {
+                url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/USLvl3noplaces.gpkg";
             } else {
                 alert("Preset not yet configured for this continent.");
                 e.target.value = "";
