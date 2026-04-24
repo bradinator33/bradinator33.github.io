@@ -167,6 +167,10 @@
         
         .radio-group { display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap; }
         .radio-group label { margin: 0; display: flex; align-items: center; gap: 5px; font-weight: normal; text-transform: none; font-size: 0.9rem; cursor: pointer; }
+        
+        .is-pinned {
+            filter: drop-shadow(0 0 4px #2563eb);
+        }
     </style>
 </head>
 <body>
@@ -286,6 +290,7 @@
         let currentLabelMode = 'hidden'; 
         let legendNames = {}; 
         let currentFilterKey = '_tableName'; 
+        let pinnedFeature = null; // Track clicked/inspected feature
 
         function init() {
             map = L.map('map', { zoomControl: false }).setView([39.8283, -98.5795], 4);
@@ -324,12 +329,23 @@
                 if (currentMode === 'paint') e.preventDefault();
             });
 
+            // Handle clicking empty space to unpin
+            map.on('click', (e) => {
+                if (currentMode === 'inspect' && !e.originalEvent._leaflet_handled) {
+                    unpinFeature();
+                }
+            });
+
             document.querySelectorAll('input[name="mode"]').forEach(radio => {
                 radio.addEventListener('change', (e) => {
                     currentMode = e.target.value;
                     const mapDiv = document.getElementById('map');
-                    if (currentMode === 'paint') mapDiv.classList.add('mode-paint');
-                    else mapDiv.classList.remove('mode-paint');
+                    if (currentMode === 'paint') {
+                        mapDiv.classList.add('mode-paint');
+                        unpinFeature();
+                    } else {
+                        mapDiv.classList.remove('mode-paint');
+                    }
                 });
             });
 
@@ -345,6 +361,14 @@
                     updateLabels();
                 }
             });
+        }
+
+        function unpinFeature() {
+            if (pinnedFeature && geoJsonLayer) {
+                geoJsonLayer.resetStyle(pinnedFeature);
+            }
+            pinnedFeature = null;
+            clearHoverInfo();
         }
 
         function initResizer() {
@@ -514,6 +538,7 @@
                 
                 allFeatures = [];
                 legendNames = {}; 
+                unpinFeature();
 
                 for (const row of res[0].values) {
                     const tableName = row[0];
@@ -751,8 +776,26 @@
             return { fillColor: '#cccccc', fillOpacity: 0.4, color: '#999999', weight: 1 };
         }
 
+        /**
+         * Logic to determine the best name key for a feature.
+         * Priority: 
+         * 1. Level 2 Names (NAME_2 / name_2)
+         * 2. Standard Names (NAME / name)
+         * 3. Fallback search (admin, identifier, etc.)
+         */
+        function getNameKey(props) {
+            if (props.NAME_2) return 'NAME_2';
+            if (props.name_2) return 'name_2';
+            if (props.NAME) return 'NAME';
+            if (props.name) return 'name';
+            
+            const nameRegex = /(name|admin|identifier|label|title|nomgeo)/i;
+            return Object.keys(props).find(k => nameRegex.test(k) && !k.startsWith('_'));
+        }
+
         function renderMapLayer(geoJsonData) {
             if (geoJsonLayer) map.removeLayer(geoJsonLayer);
+            unpinFeature();
 
             geoJsonLayer = L.geoJSON(geoJsonData, {
                 renderer: L.canvas({ padding: 0.5 }),
@@ -761,26 +804,55 @@
                     layer.on({
                         mouseover: (e) => {
                             const l = e.target;
-                            updateHoverInfo(l.feature.properties);
+                            // Only update info if nothing is pinned or if we are hovering a different one
+                            if (!pinnedFeature) {
+                                updateHoverInfo(l.feature.properties);
+                            }
+                            
                             if (currentMode === 'inspect') {
-                                l.setStyle({ weight: 3, color: '#111', fillOpacity: l.feature.properties._paintedColor ? 0.9 : 0.6 });
+                                l.setStyle({ weight: 3, color: '#2563eb', fillOpacity: l.feature.properties._paintedColor ? 0.9 : 0.6 });
                                 l.bringToFront();
                             } else if (currentMode === 'paint') {
                                 l.setStyle({ fillOpacity: 0.6 });
                             }
                         },
                         mouseout: (e) => {
-                            clearHoverInfo();
-                            geoJsonLayer.resetStyle(e.target);
+                            const l = e.target;
+                            if (!pinnedFeature) {
+                                clearHoverInfo();
+                            }
+                            
+                            // Reset style if it's not the pinned feature
+                            if (pinnedFeature !== l) {
+                                geoJsonLayer.resetStyle(l);
+                            } else {
+                                // Keep pinned style
+                                l.setStyle({ weight: 3, color: '#2563eb' });
+                            }
                         },
                         click: (e) => {
-                            if (currentMode === 'paint') {
+                            L.DomEvent.stopPropagation(e);
+                            const l = e.target;
+                            
+                            if (currentMode === 'inspect') {
+                                if (pinnedFeature === l) {
+                                    // Unpin if clicking the same one
+                                    unpinFeature();
+                                } else {
+                                    // Reset previous pin style
+                                    if (pinnedFeature) geoJsonLayer.resetStyle(pinnedFeature);
+                                    
+                                    pinnedFeature = l;
+                                    updateHoverInfo(l.feature.properties);
+                                    l.setStyle({ weight: 3, color: '#2563eb' });
+                                }
+                            } else if (currentMode === 'paint') {
                                 const selectedColor = document.getElementById('color-picker').value;
-                                const previousColor = e.target.feature.properties._paintedColor;
+                                const previousColor = l.feature.properties._paintedColor;
                                 
                                 if (previousColor !== selectedColor) {
-                                    e.target.feature.properties._paintedColor = selectedColor;
-                                    e.target.setStyle(getFeatureStyle(e.target.feature));
+                                    l.feature.properties._paintedColor = selectedColor;
+                                    l.setStyle(getFeatureStyle(l.feature));
                                     
                                     if (!legendNames[selectedColor]) {
                                         updateLegendUI();
@@ -887,8 +959,7 @@
 
         function updateHoverInfo(props) {
             const content = document.getElementById('hover-content');
-            const nameRegex = /(name|admin|identifier|label|title|nomgeo)/i;
-            const nameKey = Object.keys(props).find(k => nameRegex.test(k) && !k.startsWith('_'));
+            const nameKey = getNameKey(props);
             
             let html = '';
             if (nameKey && props[nameKey]) {
@@ -920,15 +991,11 @@
             labelsLayerGroup.clearLayers();
             if (!geoJsonLayer || currentLabelMode === 'hidden') return;
 
-            const nameRegex = /(name|admin|identifier|label|title|nomgeo)/i;
-
             geoJsonLayer.eachLayer(layer => {
                 layer.unbindTooltip();
 
-                if (currentLabelMode === 'hidden') return;
-
                 const props = layer.feature.properties;
-                const nameKey = Object.keys(props).find(k => nameRegex.test(k) && !k.startsWith('_'));
+                const nameKey = getNameKey(props);
                 const nameText = nameKey ? String(props[nameKey]) : "Unnamed";
 
                 if (currentLabelMode === 'default') {
@@ -1078,8 +1145,7 @@
                         } 
                         else if (row.Feature_Name) {
                             matchedFeature = allFeatures.find(f => {
-                                const nameRegex = /(name|admin|identifier|label|title|nomgeo)/i;
-                                const nameKey = Object.keys(f.properties).find(k => nameRegex.test(k) && !k.startsWith('_'));
+                                const nameKey = getNameKey(f.properties);
                                 return nameKey && String(f.properties[nameKey]) === String(row.Feature_Name);
                             });
                         }
@@ -1116,8 +1182,7 @@
                 let csv = "Match_ID,Layer,Feature_Name,Color_Hex,Legend_Name\n";
                 
                 allFeatures.forEach((f, index) => {
-                    const nameRegex = /(name|admin|identifier|label|title|nomgeo)/i;
-                    const nameKey = Object.keys(f.properties).find(k => nameRegex.test(k) && !k.startsWith('_'));
+                    const nameKey = getNameKey(f.properties);
                     let featureName = nameKey ? String(f.properties[nameKey]) : `Feature_${index}`;
                     featureName = '"' + featureName.replace(/"/g, '""') + '"';
                     
