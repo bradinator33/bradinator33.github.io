@@ -193,7 +193,8 @@
                 <option value="oc">Oceania (not uploaded)</option>
                 <option value="us3">United States (County Divisions)</option>
                 <option value="jp2">Japan (2nd Degree)</option>
-                <option value="LGA">Australia LGAs</option>
+                <option value="lga">Australia LGAs</option>
+                <option value="nps">US National Park Service Sites</option>
             </select>
         </div>
 
@@ -290,7 +291,7 @@
         let currentLabelMode = 'hidden'; 
         let legendNames = {}; 
         let currentFilterKey = '_tableName'; 
-        let pinnedFeature = null; // Track clicked/inspected feature
+        let pinnedFeature = null;
 
         function init() {
             map = L.map('map', { zoomControl: false }).setView([39.8283, -98.5795], 4);
@@ -329,7 +330,6 @@
                 if (currentMode === 'paint') e.preventDefault();
             });
 
-            // Handle clicking empty space to unpin
             map.on('click', (e) => {
                 if (currentMode === 'inspect' && !e.originalEvent._leaflet_handled) {
                     unpinFeature();
@@ -712,7 +712,7 @@
             let url = "";
             if (val === "na") {
                 url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/Northamerica.gpkg";
-            } else if (val === "LGA") {
+            } else if (val === "lga") {
                 url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/AustralianLGAs.gpkg";
             } else if (val === "wr1") {
                 url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/WorldLvl1.gpkg";
@@ -722,6 +722,8 @@
                 url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/JapanLvl2.gpkg";
             } else if (val === "us3") {
                 url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/USLvl3noplaces.gpkg";
+            } else if (val === "nps") {
+                url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/USNPS.geojson";
             } else {
                 alert("Preset not yet configured for this continent.");
                 e.target.value = "";
