@@ -799,7 +799,6 @@
                     layer.on({
                         mouseover: (e) => {
                             const l = e.target;
-                            // Only update info if nothing is pinned or if we are hovering a different one
                             if (!pinnedFeature) {
                                 updateHoverInfo(l.feature.properties);
                             }
@@ -817,11 +816,9 @@
                                 clearHoverInfo();
                             }
                             
-                            // Reset style if it's not the pinned feature
                             if (pinnedFeature !== l) {
                                 geoJsonLayer.resetStyle(l);
                             } else {
-                                // Keep pinned style
                                 l.setStyle({ weight: 3, color: '#2563eb' });
                             }
                         },
@@ -831,10 +828,8 @@
                             
                             if (currentMode === 'inspect') {
                                 if (pinnedFeature === l) {
-                                    // Unpin if clicking the same one
                                     unpinFeature();
                                 } else {
-                                    // Reset previous pin style
                                     if (pinnedFeature) geoJsonLayer.resetStyle(pinnedFeature);
                                     
                                     pinnedFeature = l;
