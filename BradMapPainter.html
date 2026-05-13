@@ -257,6 +257,13 @@
                         <button id="btn-export-csv" class="btn-primary" style="margin-top:0;">Export CSV</button>
                         <button id="btn-export-gpkg" class="btn-success" style="margin-top:0;">Export GPKG</button>
                     </div>
+                    
+                    <div style="margin-top: 10px;">
+                        <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: normal; color: #4b5563; text-transform: none; cursor: pointer; margin: 0;">
+                            <input type="checkbox" id="cb-export-basemap" style="cursor: pointer;">
+                            Include basemap in PNG export
+                        </label>
+                    </div>
                 </div>
 
                 <div style="margin-top: 25px; border-top: 2px solid #f3f4f6; padding-top: 15px;">
@@ -300,7 +307,8 @@
             baseMapLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; OpenStreetMap &copy; CARTO',
                 subdomains: 'abcd',
-                maxZoom: 20
+                maxZoom: 20,
+                crossOrigin: true
             }).addTo(map);
 
             labelsLayerGroup = L.layerGroup().addTo(map);
@@ -1060,12 +1068,15 @@
             const mapEl = document.getElementById('map');
             const tilePane = document.querySelector('.leaflet-tile-pane');
             const controlPane = document.querySelector('.leaflet-control-container');
+            const includeBasemap = document.getElementById('cb-export-basemap').checked;
             
             const origMapBg = mapEl.style.background;
             
-            if (tilePane) tilePane.style.display = 'none';
+            if (!includeBasemap) {
+                if (tilePane) tilePane.style.display = 'none';
+                mapEl.style.background = 'transparent';
+            }
             if (controlPane) controlPane.style.display = 'none';
-            mapEl.style.background = 'transparent';
             
             const exportLegend = createExportLegend();
             if (exportLegend) {
@@ -1084,9 +1095,11 @@
                     link.href = canvas.toDataURL('image/png');
                     link.click();
                     
-                    if (tilePane) tilePane.style.display = '';
+                    if (!includeBasemap) {
+                        if (tilePane) tilePane.style.display = '';
+                        mapEl.style.background = origMapBg;
+                    }
                     if (controlPane) controlPane.style.display = '';
-                    mapEl.style.background = origMapBg;
                     if (exportLegend && exportLegend.parentNode) {
                         exportLegend.parentNode.removeChild(exportLegend);
                     }
@@ -1094,9 +1107,11 @@
                 }).catch(err => {
                     console.error("Export Error: ", err);
                     alert("Failed to capture PNG.");
-                    if (tilePane) tilePane.style.display = '';
+                    if (!includeBasemap) {
+                        if (tilePane) tilePane.style.display = '';
+                        mapEl.style.background = origMapBg;
+                    }
                     if (controlPane) controlPane.style.display = '';
-                    mapEl.style.background = origMapBg;
                     if (exportLegend && exportLegend.parentNode) {
                         exportLegend.parentNode.removeChild(exportLegend);
                     }
