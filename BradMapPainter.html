@@ -723,7 +723,7 @@
             } else if (val === "us3") {
                 url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/USLvl3noplaces.gpkg";
             } else if (val === "nps") {
-                url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/USNPS.geojson";
+                url = "https://huggingface.co/datasets/Bradinator/Level2SubdivisionsGPKGs/resolve/main/NationalParksonly.gpkg";
             } else {
                 alert("Preset not yet configured for this continent.");
                 e.target.value = "";
@@ -778,13 +778,6 @@
             return { fillColor: '#cccccc', fillOpacity: 0.4, color: '#999999', weight: 1 };
         }
 
-        /**
-         * Logic to determine the best name key for a feature.
-         * Priority: 
-         * 1. Level 2 Names (NAME_2 / name_2)
-         * 2. Standard Names (NAME / name)
-         * 3. Fallback search (admin, identifier, etc.)
-         */
         function getNameKey(props) {
             if (props.NAME_2) return 'NAME_2';
             if (props.name_2) return 'name_2';
